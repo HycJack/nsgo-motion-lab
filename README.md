@@ -1,0 +1,76 @@
+# nsgo-motion-lab
+
+一个 NSGo 工程，两半：**写 NSGo 应用的规矩**（`SKILL.md`，可装成 DSH 技能）和**把规矩跑一遍的现场**（`lab/`，12 个页签、231 张卡片）。
+
+规矩不是想出来的，是从 lab 里踩出来的。
+
+![motion-prompt 目录的 192 个动效](lab/docs/pack-motion.png)
+
+## 目录
+
+| 路径 | 是什么 |
+| --- | --- |
+| `SKILL.md` | 技能本体：NSGo 的 API 铁律、动画与 3D 的写法、踩过的坑 |
+| `references/api.md` | 逐条 API 事实（信号、`View`/`Text`/`Button`、样式、布局、组件、服务、打包） |
+| `references/animation.md` | 动画：两套时钟、`AnimatedStyle`、曲线、弹簧、shader 驱动的动效 |
+| `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
+| `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
+| `tools/install-skill.ps1` | 把这个仓库装成 `~/.dsh/skills/nsgo` |
+
+仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
+
+## 为什么合在一个仓库
+
+技能里的每一条规矩，出处都在 `lab/` 里：
+
+- `AnimatedStyle` 只做插值，没有表达式 → 3D 相机绕圆只能拿折线逼近（`lab/page_3d.go` 的 `circleLane`、`lab/page_camera.go` 的 `arcLane`）。
+- `Scroll` 必须有被约束的高度，否则它撑到内容高度、永远不滚 → `TestScrollFitsWindow` 守着这个回归。
+- `BackfaceHidden` 在 web 上会把正反两面一起隐藏 → 翻面卡改用 `Opacity` 按角度交叉淡入。
+- 插值出来的颜色别带 alpha，否则渲染成接近纯色 → 开关轨道改成两个不透明色。
+
+反过来，`lab/README.md` 里每张卡片的写法，都能在 `references/` 找到对应的 API 事实。一处改、两边同步，不用在「技能说 A、示例做 B」之间猜。
+
+## 装技能
+
+```sh
+pwsh -File tools\install-skill.ps1
+```
+
+Windows 上优先建目录 junction（改仓库即改技能），被占用时退回复制。装完新开一个 DSH 会话，`nsgo` 技能就在目录里了。
+
+## 跑 lab
+
+要求 Go 1.26+（`go.mod` 写的是 1.27.1）。NSGo 是 pre-release，本仓库 pin 在一个 commit 上。
+
+```sh
+cd lab
+go tool nsgo dev -target web -open=false -port 8099 .   # 浏览器里看
+go test .                                               # 6 个测试
+go tool nsgo build -target windows_x64 .                # 打出 dist/
+```
+
+## 里面有什么
+
+12 个页签、231 张卡片：
+
+| 页签 | 内容 |
+| --- | --- |
+| Canvas · Animation · Shader | 30 张手写基础示例（画布 6 / 动画 4 + 16 个 preset / 着色器 4） |
+| Motion · Camera · UI Kit · Landing · Photo · Motion2 · Landing2 · Camera2 | [motion-prompt](https://github.com/showheyohtaki/motion-prompt) 目录的 8 个包 × 24 = 192 个动效，一个不落 |
+| 3D | 光线步进场景、CPU 投影立方体、CSS 3D 翻面，9 张 |
+
+camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179 POV`、`180 Over-the-shoulder`）不满足于二维近似，直接跑在光线步进场景上——相机只是一组 uniform，平台按帧推进，零 commit：
+
+![camera 包里跑在 3D 场景上的三张](lab/docs/camera-3d-three.png)
+![3D 页签](lab/docs/pack-3d.png)
+
+## 已验证的事实
+
+- `go build .`、`go vet .`、`go test .` 全过；Windows 产物 13.0 MB，能起。
+- 192 张卡片的编号 001–192 无重复、无缺号（`TestPackPages` 守着）。
+- 着色器在运行时编译，编译失败就是 panic，所以 `TestShadersCompile` 用 `core.CompileShader` 把每份源码过一遍。
+- 页签切换、UI kit 的组件状态、控件是否真的连到信号，各有测试（`TestTabsSwitchPages`、`TestUIKitControls`、`TestControlsAreLive`）。
+
+## 许可与致谢
+
+本仓库以 MIT 发布。卡片的名字、分类和时长来自 [motion-prompt](https://github.com/showheyohtaki/motion-prompt)（MIT），代码全部是 NSGo 自己的原语，没有移植上游任何一行。引擎是 [oneo-me/nsgo](https://github.com/oneo-me/nsgo)，许可归其作者；设计源自 [NSH](https://github.com/longbridge/nsh)。

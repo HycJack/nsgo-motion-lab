@@ -1,0 +1,22 @@
+# build output and local scratch
+
+# NSGo build cache and packaged app
+lab/.nsgo/
+lab/dist/
+
+# capture scratch (screenshots that are not part of docs/)
+lab/shots/*.png
+lab/shots/prof-*/
+
+# binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
