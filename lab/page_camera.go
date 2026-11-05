@@ -226,15 +226,15 @@ func camOrbit(cx *core.Scope) core.Node {
 // height, look target held on the subject, and the ray marcher does the rest.
 func camCrane(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "031", Title: "Crane up", Duration: 3000 * ms, Accent: colGreen, Height: 110,
-		Note: "Rising from knee height to twice the set's: the floor opens under the shot and the horizon drops, with the look target held on the subject.",
+		Note: "Rising from knee height to twice the set's: the floor opens under the shot and the horizon drops, with the look target drifting onto the set's centre of mass so the whole set stays framed.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			return core.Shader{
 				Program: rayProgram,
 				Label:   "Crane up",
 				Style:   stageFill,
 				Uniforms: core.Uniforms{
-					"Eye":  []any{constant(cx, 0.62), lerp(p, 0.42, 2.55), lerp(p, 3.00, 1.80)},
-					"Look": []any{constant(cx, 0.0), constant(cx, 0.55), constant(cx, 0.0)},
+					"Eye":  []any{constant(cx, 0.62), lerp(p, 0.42, 2.35), lerp(p, 3.00, 2.00)},
+					"Look": []any{lerp(p, 0.0, -0.10), lerp(p, 0.55, 0.44), lerp(p, 0.0, 0.15)},
 					"Fov":  constant(cx, 0.88),
 					"Tint": lerp(p, 0.0, 0.2),
 				},
@@ -412,10 +412,14 @@ func camMatchCut(cx *core.Scope) core.Node {
 		Stage: func(p *core.AnimatedValue) core.Node {
 			ball := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.48, 0.5, 1}, Output: []float64{0, 1, 1, 0}})
 			sun := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.5, 0.56, 1}, Output: []float64{0, 0, 1, 1}})
+			// thrown: leaves the hand low, rises fast, settles into the sky slot
+			flight := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.48}, Output: []float64{0, 1}, Easing: bezier(core.EaseOut)})
 			return core.View{Style: stageFill, Children: []core.Node{
 				camScene(core.RGB(0x1b3a5c), core.RGB(0x152436), camLayers{}),
 				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(26), Left: core.Pt(120),
-					Animated: &core.AnimatedStyle{Opacity: ball, Scale: lerp(p, 0.6, 1.4)}},
+					Animated: &core.AnimatedStyle{Opacity: ball, Scale: core.Interpolate(flight, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0.55, 1.35}}),
+						TranslateX: core.Interpolate(flight, core.Interpolation{Input: []float64{0, 1}, Output: []float64{-62, 0}}),
+						TranslateY: core.Interpolate(flight, core.Interpolation{Input: []float64{0, 1}, Output: []float64{38, 0}})}},
 					Children: []core.Node{Disc(16, core.RGB(0x9fe8ff), nil)}},
 				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(24), Left: core.Pt(118),
 					Animated: &core.AnimatedStyle{Opacity: sun}},

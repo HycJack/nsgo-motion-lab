@@ -528,16 +528,29 @@ func phGrain(cx *core.Scope) core.Node {
 		Note: "Grain is a hundred small decisions a second: the dots move on every sample, and the whole picture leans warm.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			var specks []core.Node
-			for i := 0; i < 26; i++ {
-				top := (i * 37) % 100
-				left := (i * 53) % 240
-				flick := core.Interpolate(p, core.Interpolation{
-					Input:  []float64{0, 0.2, 0.35, 0.5, 0.65, 0.8, 1},
-					Output: []float64{0.15, 0.5, 0.1, 0.45, 0.2, 0.55, 0.15},
-				})
+			// Fixed sample grid, rotated output patterns: every speck flickers
+			// on its own phase and drifts a point or two, so the field shimmers
+			// instead of pulsing in unison.
+			grid := []float64{0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.84, 1}
+			base := []float64{0.2, 0.52, 0.14, 0.46, 0.18, 0.54, 0.12, 0.2}
+			wx := []float64{0, 1, -1, 0.6, -0.8, 1, -0.6, 0}
+			for i := 0; i < 72; i++ {
+				top := (i*37)%96 + 2
+				left := (i*53)%236 + 2
+				flick := make([]float64, 8)
+				for k := range grid {
+					flick[k] = base[(k+i)%8] + float64(i%5)*0.04
+				}
+				wob := make([]float64, 8)
+				for k := range grid {
+					wob[k] = wx[(k+i)%8]
+				}
+				flicker := core.Interpolate(p, core.Interpolation{Input: grid, Output: flick})
+				drift := core.Interpolate(p, core.Interpolation{Input: grid, Output: wob})
 				specks = append(specks, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(float32(top))),
 					Left: core.Pt(core.Points(float32(left))), Width: core.Pt(1), Height: core.Pt(1), Background: core.RGB(0xfff2d0),
-					Animated: &core.AnimatedStyle{Opacity: flick}}})
+					Animated: &core.AnimatedStyle{Opacity: flicker, TranslateX: drift, TranslateY: core.Interpolate(drift, core.Interpolation{
+						Input: []float64{-1, 0, 1}, Output: []float64{0.6, -0.8, 0.4}})}}})
 			}
 			return core.View{Style: stageFill, Children: append([]core.Node{
 				phScene(core.RGB(0x2a3f5c), core.RGB(0x1b2a3c), core.AnimatedStyle{}, phLayers{}),

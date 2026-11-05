@@ -408,12 +408,15 @@ func lp2LoadingButton(cx *core.Scope) core.Node {
 			busy := core.Interpolate(p, core.Interpolation{Input: []float64{0.2, 0.3, 0.62, 0.72}, Output: []float64{0, 1, 1, 0}})
 			done := core.Interpolate(p, core.Interpolation{Input: []float64{0.72, 0.85}, Output: []float64{0, 1}})
 			spin := core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 720}})
+			// The label leaves with the spinner and stays gone: "Done" ends it,
+			// so both texts are never on screen at once.
+			label := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.2, 0.3, 1}, Output: []float64{1, 1, 0, 0}})
 			return lpFrame(true,
 				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(44), Left: core.Pt(0), Right: core.Pt(0),
 					AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{
 					core.View{Style: core.Style{Width: core.Pt(96), Height: core.Pt(22), CornerRadius: 11, Background: colCyan,
 						AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{
-						core.View{Style: core.Style{Position: core.Absolute, Animated: &core.AnimatedStyle{Opacity: core.Interpolate(busy, core.Interpolation{Input: []float64{0, 1}, Output: []float64{1, 0}})}},
+						core.View{Style: core.Style{Position: core.Absolute, Animated: &core.AnimatedStyle{Opacity: label}},
 							Children: []core.Node{Word("Checkout", 10, core.RGB(0x07101c), nil)}},
 						core.View{Style: core.Style{Position: core.Absolute, Animated: &core.AnimatedStyle{Opacity: busy, Rotate: spin}},
 							Children: []core.Node{Ring(11, 2, core.RGB(0x07101c), nil)}},
