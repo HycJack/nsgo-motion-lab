@@ -394,15 +394,29 @@ func phVignette(cx *core.Scope) core.Node {
 		Note: "Four corners, one wash: the falloff is what pulls the eye to the face, not the darkness itself.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			dark := core.Interpolate(p, core.Interpolation{Input: []float64{0.1, 0.95}, Output: []float64{0, 0.85}})
-			corner := func(top float32, left float32) core.Node {
-				return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(top)), Left: core.Pt(core.Points(left)),
-					Width: core.Pt(110), Height: core.Pt(70), CornerRadius: 30, Background: core.RGB(0x05070a),
-					Animated: &core.AnimatedStyle{Opacity: dark}}}
+			const none = float32(-1e9)
+			corner := func(top, left, right, bottom float32) core.Node {
+				s := core.Style{Position: core.Absolute, Width: core.Pt(110), Height: core.Pt(70), CornerRadius: 30,
+					Background: core.RGB(0x05070a), Animated: &core.AnimatedStyle{Opacity: dark}}
+				if top != none {
+					s.Top = core.Pt(core.Points(top))
+				}
+				if left != none {
+					s.Left = core.Pt(core.Points(left))
+				}
+				if right != none {
+					s.Right = core.Pt(core.Points(right))
+				}
+				if bottom != none {
+					s.Bottom = core.Pt(core.Points(bottom))
+				}
+				return core.View{Style: s}
 			}
 			return core.View{Style: stageFill, Children: []core.Node{
 				phScene(core.RGB(0x2a3f5c), core.RGB(0x1b2a3c), core.AnimatedStyle{},
 					phLayers{Head: &core.AnimatedStyle{Background: solid(cx, core.RGB(0xf0d0b0))}}),
-				corner(-18, -22), corner(-18, 120), corner(70, -22), corner(70, 120),
+				corner(-18, -22, none, none), corner(-18, none, -22, none),
+				corner(none, -22, none, -18), corner(none, none, -22, -18),
 			}}
 		}})
 }
@@ -421,11 +435,11 @@ func phHighKey(cx *core.Scope) core.Node {
 						Ground: &core.AnimatedStyle{Background: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 1},
 							Colors: []core.Color{core.RGB(0x1b2a3c), core.RGB(0xc8d8e6)}})},
 						Head: &core.AnimatedStyle{Background: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 1},
-							Colors: []core.Color{core.RGB(0xd9b79a), core.RGB(0xf7e7d8)}})},
+							Colors: []core.Color{core.RGB(0xd9b79a), core.RGB(0xefcba6)}})},
 						Body: &core.AnimatedStyle{Background: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 1},
-							Colors: []core.Color{core.RGB(0x3a4a5e), core.RGB(0xbccedd)}})},
+							Colors: []core.Color{core.RGB(0x3a4a5e), core.RGB(0x9db2c6)}})},
 					}),
-				phScrim(core.RGB(0xffffff), core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 0.22}})),
+				phScrim(core.RGB(0xffffff), core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 0.16}})),
 			}}
 		}})
 }

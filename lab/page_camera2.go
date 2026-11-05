@@ -134,7 +134,7 @@ func c2Follow(cx *core.Scope) core.Node {
 		Stage: func(p *core.AnimatedValue) core.Node {
 			weave := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.25, 0.5, 0.75, 1}, Output: []float64{0, 18, 0, -18, 0}})
 			return core.View{Style: stageFill, Children: []core.Node{
-				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
+				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(-40), Right: core.Pt(-40), Bottom: core.Pt(0),
 					Animated: &core.AnimatedStyle{TranslateX: core.Interpolate(weave, core.Interpolation{Input: []float64{-18, 18}, Output: []float64{30, -30}})}},
 					Children: []core.Node{camScene(core.RGB(0x1b3a5c), core.RGB(0x152436), camLayers{
 						Near: &core.AnimatedStyle{TranslateY: lerp(p, 0, 40), Scale: lerp(p, 1, 1.4)},
@@ -356,9 +356,13 @@ func c2ExtremeClose(cx *core.Scope) core.Node {
 						Animated: &core.AnimatedStyle{Scale: zoom}}, Children: []core.Node{
 						core.View{Style: core.Style{Width: core.Pt(64), Height: core.Pt(64), CornerRadius: 32, Background: core.RGB(0xd9b79a),
 							AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{
-							core.View{Style: core.Style{Direction: core.Row, Gap: 12}, Children: []core.Node{
-								Disc(9, core.RGB(0x2a2018), nil),
-								Disc(9, core.RGB(0x2a2018), nil),
+							core.View{Style: core.Style{Direction: core.Column, Gap: 5, AlignItems: core.AlignCenter}, Children: []core.Node{
+								core.View{Style: core.Style{Direction: core.Row, Gap: 12}, Children: []core.Node{
+									Disc(9, core.RGB(0x2a2018), nil),
+									Disc(9, core.RGB(0x2a2018), nil),
+								}},
+								core.View{Style: core.Style{Width: core.Pt(3), Height: core.Pt(8), Background: core.RGB(0xb98f6f), CornerRadius: 1}},
+								core.View{Style: core.Style{Width: core.Pt(20), Height: core.Pt(3), Background: core.RGB(0xb98f6f), CornerRadius: 1}},
 							}},
 						}},
 					}},
