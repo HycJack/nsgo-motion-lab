@@ -436,22 +436,22 @@ func moParticles(cx *core.Scope) core.Node {
 		Note: "Six emitters, six delays, one gravity: the loop is what turns a single burst into a fountain.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			var parts []core.Node
-			const count = 18
+			const count = 24
 			cols := []core.Color{colAmber, core.RGB(0xffd27a), core.RGB(0xf0a03c)}
 			for i := 0; i < count; i++ {
 				s := -1.0 + 2.0*float64(i)/float64(count-1)
 				delay := 0.05 * float64(i%4)
 				up := core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.5 + delay, 1}, Output: []float64{0, 1, 0}})
-				size := float32(3 + i%3)
-				parts = append(parts, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(74), Left: core.Pt(82),
+				size := float32(4 + i%3)
+				parts = append(parts, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(74), Left: core.Pt(256),
 					Animated: &core.AnimatedStyle{
-						TranslateX: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 42 * s}}),
-						TranslateY: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -54 - float64(i%4)*6}}),
+						TranslateX: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 150 * s}}),
+						TranslateY: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -56 - float64(i%4)*8}}),
 						Opacity:    core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.85, 1}, Output: []float64{1, 1, 0}}),
 					}}, Children: []core.Node{Disc(size, cols[i%len(cols)], nil)}})
 			}
-			return uipScreen(170, 96, append([]core.Node{
-				At(78, 80, Disc(8, core.RGB(0x3a2d18), nil)),
+			return uipScreen(520, 96, append([]core.Node{
+				At(78, 256, Disc(8, core.RGB(0x3a2d18), nil)),
 			}, parts...)...)
 		}})
 }

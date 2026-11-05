@@ -432,10 +432,14 @@ func camWhipPan(cx *core.Scope) core.Node {
 			swing := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.4, 0.55, 1}, Output: []float64{0, -180, 180, 0}})
 			second := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.42, 0.5, 1}, Output: []float64{0, 0, 1, 1}})
 			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
-				Overflow: core.Hidden, Animated: &core.AnimatedStyle{TranslateX: swing}}, Children: []core.Node{camShots(
-				&core.AnimatedStyle{},
-				&core.AnimatedStyle{Opacity: second},
-			)}}
+				Overflow: core.Hidden}, Children: []core.Node{
+				camScene(core.RGB(0x1b3a5c), core.RGB(0x152436), camLayers{}),
+				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
+					Animated: &core.AnimatedStyle{TranslateX: swing}}, Children: []core.Node{camShots(
+					&core.AnimatedStyle{},
+					&core.AnimatedStyle{Opacity: second},
+				)}},
+			}}
 		}})
 }
 

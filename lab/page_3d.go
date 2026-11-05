@@ -86,10 +86,10 @@ func cam3D(cx *core.Scope, s shot3D) core.Node {
 // is the frame the other six moves are made of.
 func shotScene(cx *core.Scope) core.Node {
 	return cam3D(cx, shot3D{
-		ID: "3D 01", Title: "Ray-marched scene", Accent: colCyan, Duration: 1200 * ms,
+		ID: "3D 01", Title: "Ray-marched scene", Accent: colCyan, Duration: 4200 * ms, Loop: true,
 		Note: "三个球加一个立方体落在地面上：光线步进在片元着色器里解出每个像素，没有网格，也没有顶点缓冲。",
-		Eye:  [2][3]float64{{0.55, 0.95, 2.75}, {0.55, 0.95, 2.75}},
-		Look: [2][3]float64{{0.0, 0.50, 0.15}, {0.0, 0.50, 0.15}},
+		Eye:  [2][3]float64{{0.55, 0.95, 2.75}, {1.25, 1.05, 2.35}},
+		Look: [2][3]float64{{0.0, 0.50, 0.15}, {-0.05, 0.48, 0.15}},
 	})
 }
 
