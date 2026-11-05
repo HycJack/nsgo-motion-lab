@@ -7,7 +7,6 @@ package main
 
 import (
 	"math"
-	"time"
 
 	"github.com/oneo-me/nsgo/core"
 )
@@ -179,28 +178,27 @@ func m2Path(cx *core.Scope) core.Node {
 		Stage: func(p *core.AnimatedValue) core.Node {
 			x := core.Interpolate(p, core.Interpolation{
 				Input:  []float64{0, 0.25, 0.5, 0.75, 1},
-				Output: []float64{6, 60, 116, 60, 6},
+				Output: []float64{14, 120, 232, 120, 14},
 			})
 			y := core.Interpolate(p, core.Interpolation{
 				Input:  []float64{0, 0.25, 0.5, 0.75, 1},
-				Output: []float64{52, 8, 46, 80, 52},
+				Output: []float64{48, 12, 44, 80, 48},
 			})
 			head := core.Interpolate(p, core.Interpolation{
 				Input:  []float64{0, 0.25, 0.5, 0.75, 1},
 				Output: []float64{-30, -90, 60, 140, 330},
 			})
 			var dots []core.Node
-			for i := 0; i < 7; i++ {
-				t := float64(i) / 6
+			for i := 0; i < 11; i++ {
+				t := float64(i) / 10
 				dots = append(dots, core.View{Style: core.Style{Position: core.Absolute,
-					Top:  core.Pt(core.Points(float32(80 - 34*math.Sin(t*math.Pi*2)))),
-					Left: core.Pt(core.Points(float32(8 + 110*t)))}, Children: []core.Node{Disc(2, core.RGB(0x2f4256), nil)}})
+					Top:  core.Pt(core.Points(float32(48 - 34*math.Sin(t*math.Pi*2)))),
+					Left: core.Pt(core.Points(float32(14 + 218*t)))}, Children: []core.Node{Disc(3, core.RGB(0x35506e), nil)}})
 			}
-			return uipScreen(150, 96, append([]core.Node{
+			return uipScreen(300, 96, append([]core.Node{
 				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0),
 					Animated: &core.AnimatedStyle{TranslateX: x, TranslateY: y, Rotate: head}}, Children: []core.Node{
-					core.View{Style: core.Style{Width: core.Pt(0), Height: core.Pt(0), BorderWidth: 0}},
-					Panel(14, 8, colCyan, nil),
+					Panel(22, 12, colCyan, nil),
 				}},
 			}, dots...)...)
 		}})
@@ -250,25 +248,36 @@ func m2Scramble(cx *core.Scope) core.Node {
 		Stage: func(p *core.AnimatedValue) core.Node {
 			word := "DECODED"
 			n := len(word)
-			shown := core.NewSignal(cx, "")
-			cx.AfterFunc(30*ms, func() {
-				for i := 1; i <= n; i++ {
-					at := i
-					cx.AfterFunc(time.Duration(at)*180*ms, func() {
-						s := word[:at]
-						for k := 0; k < 3 && at+k < n; k++ {
-							s += string(byte("XKQZ#%&"[int(math.Mod(float64(at+k)*7, 7))]))
-						}
-						shown.Set(s)
-					})
+			alphabet := "XKQZ#%&@"
+			// One frame per step of the decode (0..n letters locked), each drawn
+			// with the still-unsolved tail as noise. Every frame is its own layer
+			// whose opacity is a function of p, so the whole thing is driven by the
+			// shared AnimatedValue and a Replay genuinely restarts it.
+			var layers []core.Node
+			for i := 0; i <= n; i++ {
+				s := word[:i]
+				for k := i; k < n; k++ {
+					s += string(alphabet[(i*3+k*5+1)%len(alphabet)])
 				}
-				cx.AfterFunc(time.Duration(n+1)*180*ms, func() { shown.Set(word) })
-			})
-			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
-				AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{
-				core.Text{ContentFunc: func() string { return shown.Get() },
-					Style: core.Style{FontSize: 22, FontWeight: core.FontWeightBold, Color: colGreen, LetterSpacing: 2}},
-			}}
+				start := float64(i) / float64(n)
+				end := float64(i+1) / float64(n)
+				const eps = 0.03
+				var op core.AnimatedNode
+				switch {
+				case i == 0:
+					op = core.Interpolate(p, core.Interpolation{Input: []float64{0, end - eps, end + eps}, Output: []float64{1, 1, 0}})
+				case i == n:
+					op = core.Interpolate(p, core.Interpolation{Input: []float64{start - eps, start - eps/2, 1}, Output: []float64{0, 1, 1}})
+				default:
+					op = core.Interpolate(p, core.Interpolation{Input: []float64{start - eps, start + eps, end - eps, end + eps}, Output: []float64{0, 1, 1, 0}})
+				}
+				layers = append(layers, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
+					AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter,
+					Animated: &core.AnimatedStyle{Opacity: op}},
+					Children: []core.Node{core.Text{Content: s,
+						Style: core.Style{FontSize: 22, FontWeight: core.FontWeightBold, Color: colGreen, LetterSpacing: 2}}}})
+			}
+			return core.View{Style: stageFill, Children: layers}
 		}})
 }
 
@@ -312,7 +321,7 @@ func m2TextOnPath(cx *core.Scope) core.Node {
 		Note: "Each letter is placed and turned from the same curve, so the line of text stays welded to the wave as it travels.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			word := "follow the line"
-			travel := core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 40}})
+			travel := core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 52}})
 			var letters []core.Node
 			for i := 0; i < len(word); i++ {
 				t := float64(i)/float64(len(word)) + 0.02
@@ -320,13 +329,13 @@ func m2TextOnPath(cx *core.Scope) core.Node {
 					continue
 				}
 				letters = append(letters, core.View{Style: core.Style{Position: core.Absolute,
-					Top:  core.Pt(core.Points(float32(46 - 26*math.Sin(t*math.Pi*2)))),
-					Left: core.Pt(core.Points(float32(4 + 160*t))),
+					Top:  core.Pt(core.Points(float32(48 - 30*math.Sin(t*math.Pi*2)))),
+					Left: core.Pt(core.Points(float32(8 + 210*t))),
 					Animated: &core.AnimatedStyle{TranslateX: travel,
-						Rotate: core.Interpolate(travel, core.Interpolation{Input: []float64{0, 40}, Output: []float64{-8 * math.Cos(t*math.Pi*2), -8 * math.Cos(t*math.Pi*2)}})}},
-					Children: []core.Node{Word(string(word[i]), 11, colViolet, nil)}})
+						Rotate: constant(cx, -10*math.Cos(t*math.Pi*2))}},
+					Children: []core.Node{Word(string(word[i]), 13, colViolet, nil)}})
 			}
-			return uipScreen(180, 96, letters...)
+			return uipScreen(240, 96, letters...)
 		}})
 }
 
@@ -338,9 +347,9 @@ func m2VariableFont(cx *core.Scope) core.Node {
 			bold := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.45, 0.55, 1}, Output: []float64{0, 1, 1, 0}})
 			knob := core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 120}, Easing: bezier(core.EaseInOut)})
 			return uipScreen(160, 96,
-				At(26, 10, core.View{Style: core.Style{Position: core.Relative}, Children: []core.Node{
-					core.Text{Content: "Weight", Style: core.Style{FontSize: 24, FontWeight: core.FontWeightLight, Color: colText}},
-					core.Text{Content: "Weight", Style: core.Style{Position: core.Absolute, FontSize: 24, FontWeight: core.FontWeightBold, Color: colText,
+				At(24, 10, core.View{Style: core.Style{Position: core.Relative, Width: core.Pt(112), Height: core.Pt(30)}, Children: []core.Node{
+					core.Text{Content: "Weight", Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), FontSize: 24, FontWeight: core.FontWeightLight, Color: colText}},
+					core.Text{Content: "Weight", Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), FontSize: 24, FontWeight: core.FontWeightBold, Color: colText,
 						Animated: &core.AnimatedStyle{Opacity: bold}}},
 				}}),
 				At(72, 10, uipBar(120, 2, core.RGB(0x1b2534), nil)),
@@ -367,8 +376,9 @@ func m2TextMask(cx *core.Scope) core.Node {
 					Animated: &core.AnimatedStyle{Opacity: core.Interpolate(reveal, core.Interpolation{Input: []float64{0, 1}, Output: []float64{1, 0}}),
 						Scale: window}},
 					Children: []core.Node{
-						core.View{Style: core.Style{Background: core.RGB(0x080b11), Padding: core.Edges{Top: 6, Right: 8, Bottom: 6, Left: 8}},
-							Children: []core.Node{Word("SEA", 30, core.RGB(0x080b11), nil)}},
+						core.View{Style: core.Style{Background: core.RGB(0x05070a), CornerRadius: 8,
+							Padding: core.Edges{Top: 10, Right: 14, Bottom: 10, Left: 14}},
+							Children: []core.Node{Word("SEA", 30, core.RGB(0x9fd8ff), nil)}},
 					}},
 			}}
 		}})
@@ -434,13 +444,14 @@ func m2LineBoil(cx *core.Scope) core.Node {
 					Output: []float64{0, seed, -seed, seed * 0.6, -seed * 0.8, seed * 0.5, 0},
 				})
 			}
-			return uipScreen(140, 96,
-				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(24), Left: core.Pt(14),
-					Width: core.Pt(112), Height: core.Pt(50), BorderWidth: 2, BorderColor: colText, CornerRadius: 6,
-					Animated: &core.AnimatedStyle{TranslateX: wob(1.2), TranslateY: wob(0.8)}}},
-				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(44), Left: core.Pt(34),
-					Width: core.Pt(40), Height: core.Pt(30), BorderWidth: 2, BorderColor: colText, CornerRadius: 15,
-					Animated: &core.AnimatedStyle{TranslateX: wob(0.9)}}},
+			return uipScreen(200, 96,
+				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(16), Left: core.Pt(80),
+					Width: core.Pt(60), Height: core.Pt(60), BorderWidth: 2, BorderColor: colText, CornerRadius: 30,
+					Animated: &core.AnimatedStyle{TranslateX: wob(4.0), TranslateY: wob(2.6)}}, Children: []core.Node{
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(18), Left: core.Pt(16)}, Children: []core.Node{Disc(6, colText, nil)}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(18), Left: core.Pt(38)}, Children: []core.Node{Disc(6, colText, nil)}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(40), Left: core.Pt(18), Width: core.Pt(24), Height: core.Pt(2), Background: colText, CornerRadius: 1}},
+				}},
 			)
 		}})
 }

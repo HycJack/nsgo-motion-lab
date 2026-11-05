@@ -395,8 +395,13 @@ func camJumpCut(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "041", Title: "Jump cut", Duration: 2000 * ms, Accent: colPink, Height: 110,
 		Note: "No cut-away: the same shot, twice, with time removed in between. He is suddenly closer and the second hand has moved.",
 		Stage: func(p *core.AnimatedValue) core.Node {
-			jump := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.49, 0.5, 1}, Output: []float64{0, 0, 44, 44}})
-			return camScene(core.RGB(0x1b3a5c), core.RGB(0x152436), camLayers{Figure: &core.AnimatedStyle{TranslateX: jump}})
+			jump := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.49, 0.5, 1}, Output: []float64{0, 0, 64, 64}})
+			zoom := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.49, 0.5, 1}, Output: []float64{1, 1, 1.5, 1.5}})
+			sun := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.49, 0.5, 1}, Output: []float64{0, 0, 18, 18}})
+			return camScene(core.RGB(0x1b3a5c), core.RGB(0x152436), camLayers{
+				Sun:    &core.AnimatedStyle{TranslateX: sun},
+				Figure: &core.AnimatedStyle{TranslateX: jump, Scale: zoom},
+			})
 		}})
 }
 

@@ -7,10 +7,24 @@ package main
 // The code is NSGo's own.
 
 import (
-	"time"
-
 	"github.com/oneo-me/nsgo/core"
 )
+
+// seqFade returns an opacity node that shows layer i of n for one slice of the
+// shared progress p. All n layers stacked on top of each other therefore read as
+// one changing value, yet stay driven entirely by p so a Replay restarts them.
+func seqFade(p *core.AnimatedValue, i, n int, upto, eps float64) core.AnimatedNode {
+	start := upto * float64(i) / float64(n)
+	end := upto * float64(i+1) / float64(n)
+	switch {
+	case i == 0:
+		return core.Interpolate(p, core.Interpolation{Input: []float64{0, end - eps, end + eps}, Output: []float64{1, 1, 0}})
+	case i == n:
+		return core.Interpolate(p, core.Interpolation{Input: []float64{start - eps, start - eps/2, 1}, Output: []float64{0, 1, 1}})
+	default:
+		return core.Interpolate(p, core.Interpolation{Input: []float64{start - eps, start + eps, end - eps, end + eps}, Output: []float64{0, 1, 1, 0}})
+	}
+}
 
 // pageMotion lays the pack out.
 func pageMotion(cx *core.Scope) core.Node {
@@ -129,15 +143,16 @@ func circleY(i int) float64 { return []float64{0, 0.7, 1, 0.7, 0, -0.7, -1, -0.7
 // #004 Line draw: the line draws on, then is erased from where it started.
 func moLineDraw(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "004", Title: "Line draw", Duration: 2400 * ms, Accent: colGreen,
-		Note: "A line can be drawn from one end and erased back to the same end; the dot rides the tip either way.",
+		Note: "The line is wiped on from the left and erased back to the same end; the dot rides its tip the whole way.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			grow := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.6, 1}, Output: []float64{0, 1, 0}})
 			return uipScreen(180, 96,
-				At(20, 10, uipBar(180, 1, core.RGB(0x1b2534), nil)),
-				At(58, 10, uipBar(180, 1, core.RGB(0x1b2534), nil)),
-				At(10, 10, core.View{Style: core.Style{Width: core.Pt(180), Height: core.Pt(3), CornerRadius: 2, Background: colGreen,
-					Animated: &core.AnimatedStyle{ScaleX: grow, TranslateX: lerp(grow, 0, 90)}}}),
-				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(54), Left: core.Pt(10),
+				At(40, 10, core.View{Style: core.Style{Width: core.Pt(180), Height: core.Pt(3), CornerRadius: 2,
+					Background: core.RGB(0x1b2534), Overflow: core.Hidden}, Children: []core.Node{
+					core.View{Style: core.Style{Width: core.Pt(180), Height: core.Pt(3), Background: colGreen,
+						Animated: &core.AnimatedStyle{TranslateX: lerp(grow, -180, 0)}}},
+				}}),
+				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(36), Left: core.Pt(7),
 					Animated: &core.AnimatedStyle{TranslateX: lerp(grow, 0, 180)}},
 					Children: []core.Node{Disc(7, core.RGB(0xeaf1fa), nil)}},
 			)
@@ -166,21 +181,21 @@ func moMaskReveal(cx *core.Scope) core.Node {
 // #006 Typewriter: an input fills a character at a time, then the send button lights.
 func moTypewriter(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "006", Title: "Typewriter", Duration: 2400 * ms, Accent: colGreen,
-		Note: "A caret, a character every sixth of the pass, and the send button only lights once the line is complete.",
+		Note: "A caret, a character at a time, and the send button only lights once the line is complete; the whole line is driven by the pass, so Replay retypes it.",
 		Stage: func(p *core.AnimatedValue) core.Node {
-			msg := core.NewSignal(cx, "")
 			full := "Ship it today"
-			cx.AfterFunc(60*ms, func() {
-				for i := 1; i <= len(full); i++ {
-					at := i
-					cx.AfterFunc(time.Duration(at)*90*ms, func() { msg.Set(full[:at]) })
-				}
-			})
+			n := len(full)
+			var layers []core.Node
+			for i := 0; i <= n; i++ {
+				layers = append(layers, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0),
+					Animated: &core.AnimatedStyle{Opacity: seqFade(p, i, n, 0.78, 0.015)}},
+					Children: []core.Node{core.Text{Content: full[:i], Style: core.Style{FontSize: 10, Color: colText}}}})
+			}
 			send := core.Interpolate(p, core.Interpolation{Input: []float64{0.8, 0.95}, Output: []float64{0, 1}})
 			return uipScreen(190, 96,
 				At(26, 8, core.View{Style: core.Style{Width: core.Pt(174), Height: core.Pt(26), CornerRadius: 7,
 					BorderWidth: 1, BorderColor: core.RGB(0x2a3644), Padding: core.Edges{Left: 8}, Direction: core.Row, AlignItems: core.AlignCenter}, Children: []core.Node{
-					core.Text{ContentFunc: func() string { return msg.Get() }, Style: core.Style{FontSize: 10, Color: colText}},
+					core.View{Style: core.Style{Position: core.Relative, Width: core.Pt(150), Height: core.Pt(14)}, Children: layers},
 					core.View{Style: core.Style{Width: core.Pt(4), Height: core.Pt(12), Background: colGreen,
 						Animated: &core.AnimatedStyle{Opacity: core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.5, 0.51, 1}, Output: []float64{1, 1, 0, 1}})}}},
 				}}),
@@ -197,16 +212,20 @@ func moTypewriter(cx *core.Scope) core.Node {
 // #007 Count-up: the number races and locks onto its value.
 func moCountUp(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "007", Title: "Count-up", Duration: 1800 * ms, Accent: colAmber,
-		Note: "The value is a signal, not a re-render: one text node, its content read from the number as it runs.",
+		Note: "The value races and locks onto its number; every step is its own layer tied to the pass, so Replay counts it up again.",
 		Stage: func(p *core.AnimatedValue) core.Node {
-			n := core.NewSignal(cx, 0.0)
-			cx.AfterFunc(30*ms, func() {
-				cx.Animate(1500*ms, core.EaseOut, func(t float64) { n.Set(4820 * t) })
-			})
+			const target = 4820.0
+			const steps = 16
+			var layers []core.Node
+			for i := 0; i <= steps; i++ {
+				v := target * float64(i) / float64(steps)
+				layers = append(layers, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0),
+					Animated: &core.AnimatedStyle{Opacity: seqFade(p, i, steps, 0.86, 0.02)}},
+					Children: []core.Node{core.Text{Content: formatCount(v), Style: core.Style{FontSize: 28, FontWeight: core.FontWeightBold, Color: colText}}}})
+			}
 			bar := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.9, 1}, Output: []float64{0, 1, 1}})
 			return uipScreen(180, 96,
-				At(24, 10, core.Text{ContentFunc: func() string { return formatCount(n.Get()) },
-					Style: core.Style{FontSize: 28, FontWeight: core.FontWeightBold, Color: colText}}),
+				At(24, 10, core.View{Style: core.Style{Position: core.Relative, Width: core.Pt(150), Height: core.Pt(34)}, Children: layers}),
 				At(64, 10, uipBar(150, 3, core.RGB(0x1d2836), nil)),
 				At(63, 10, core.View{Style: core.Style{Width: core.Pt(150), Height: core.Pt(3), CornerRadius: 2, Background: colAmber,
 					Animated: &core.AnimatedStyle{ScaleX: bar, TranslateX: lerp(bar, 0, 75)}}}),
@@ -325,16 +344,30 @@ func moSquash(cx *core.Scope) core.Node {
 // #012 Shape morph: circle, square, diamond, and the colour comes along.
 func moMorph(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "012", Title: "Shape morph", Duration: 2200 * ms, Accent: colViolet,
-		Note: "There is no path here: the corner radius is fixed and the shape turns, but the colour carries the change.",
+		Note: "There is no path here: a round, a box and a diamond are stacked, and the crossfade between them carries the change.",
 		Stage: func(p *core.AnimatedValue) core.Node {
-			rot := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.5, 1}, Output: []float64{0, 45, 135}})
-			col := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.5, 1}, Output: []float64{0, 1, 2},
-				Colors: []core.Color{colViolet, colCyan, colPink}})
-			round := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.5, 1}, Output: []float64{1, 0, 0.5}})
-			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
-				AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{
-				core.View{Style: core.Style{Width: core.Pt(40), Height: core.Pt(40), Background: colViolet,
-					Animated: &core.AnimatedStyle{Background: col, Rotate: rot, Scale: round}}},
+			// A round, a box and a diamond held on top of one another; only their
+			// opacity and colour move, so the shape reads as one thing changing
+			// form instead of collapsing to a speck and popping back.
+			wrap := func(child core.Node) core.Node {
+				return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
+					AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{child}}
+			}
+			circleOp := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.22, 0.4}, Output: []float64{1, 1, 0}})
+			squareOp := core.Interpolate(p, core.Interpolation{Input: []float64{0.22, 0.4, 0.6, 0.74}, Output: []float64{0, 1, 1, 0}})
+			diamondOp := core.Interpolate(p, core.Interpolation{Input: []float64{0.6, 0.78, 1}, Output: []float64{0, 1, 1}})
+			rot := core.Interpolate(p, core.Interpolation{Input: []float64{0.4, 1}, Output: []float64{0, 45}})
+			circleCol := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.45}, Output: []float64{0, 1},
+				Colors: []core.Color{colViolet, colCyan}})
+			squareCol := core.Interpolate(p, core.Interpolation{Input: []float64{0.3, 0.9}, Output: []float64{0, 1},
+				Colors: []core.Color{colCyan, colPink}})
+			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0)}, Children: []core.Node{
+				wrap(core.View{Style: core.Style{Width: core.Pt(40), Height: core.Pt(40), CornerRadius: 20, Background: colViolet,
+					Animated: &core.AnimatedStyle{Opacity: circleOp, Background: circleCol}}}),
+				wrap(core.View{Style: core.Style{Width: core.Pt(40), Height: core.Pt(40), CornerRadius: 6, Background: colCyan,
+					Animated: &core.AnimatedStyle{Opacity: squareOp, Background: squareCol, Rotate: rot}}}),
+				wrap(core.View{Style: core.Style{Width: core.Pt(40), Height: core.Pt(40), CornerRadius: 6, Background: colPink,
+					Animated: &core.AnimatedStyle{Opacity: diamondOp, Rotate: constant(cx, 45)}}}),
 			}}
 		}})
 }
@@ -403,16 +436,19 @@ func moParticles(cx *core.Scope) core.Node {
 		Note: "Six emitters, six delays, one gravity: the loop is what turns a single burst into a fountain.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			var parts []core.Node
-			spread := []float64{-1, -0.6, -0.2, 0.2, 0.6, 1}
-			for i, s := range spread {
-				delay := 0.07 * float64(i%3)
-				up := core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.55 + delay, 1}, Output: []float64{0, 1, 0}})
+			const count = 18
+			cols := []core.Color{colAmber, core.RGB(0xffd27a), core.RGB(0xf0a03c)}
+			for i := 0; i < count; i++ {
+				s := -1.0 + 2.0*float64(i)/float64(count-1)
+				delay := 0.05 * float64(i%4)
+				up := core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.5 + delay, 1}, Output: []float64{0, 1, 0}})
+				size := float32(3 + i%3)
 				parts = append(parts, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(74), Left: core.Pt(82),
 					Animated: &core.AnimatedStyle{
-						TranslateX: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 34 * s}}),
-						TranslateY: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -52}}),
-						Opacity:    core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.8, 1}, Output: []float64{1, 1, 0}}),
-					}}, Children: []core.Node{Disc(5, colAmber, nil)}})
+						TranslateX: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 42 * s}}),
+						TranslateY: core.Interpolate(up, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -54 - float64(i%4)*6}}),
+						Opacity:    core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.85, 1}, Output: []float64{1, 1, 0}}),
+					}}, Children: []core.Node{Disc(size, cols[i%len(cols)], nil)}})
 			}
 			return uipScreen(170, 96, append([]core.Node{
 				At(78, 80, Disc(8, core.RGB(0x3a2d18), nil)),

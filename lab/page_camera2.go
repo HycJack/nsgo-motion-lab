@@ -11,8 +11,6 @@ package main
 // Catalog names and timings: github.com/showheyohtaki/motion-prompt (MIT).
 
 import (
-	"time"
-
 	"github.com/oneo-me/nsgo/core"
 )
 
@@ -71,8 +69,11 @@ func c2BarrelRoll(cx *core.Scope) core.Node {
 		Note: "Three hundred and sixty degrees of roll, and the horizon is level at both ends: the frame is scaled up enough to hide the corners on the way round.",
 		Stage: func(p *core.AnimatedValue) core.Node {
 			roll := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.5, 1}, Output: []float64{0, 180, 360}, Easing: bezier(core.EaseInOut)})
-			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(-40), Left: core.Pt(-40), Right: core.Pt(-40), Bottom: core.Pt(-40),
-				Animated: &core.AnimatedStyle{Rotate: roll, Scale: constant(cx, 1.7)}},
+			// Inset well past the frame and scale up hard: at the 90° point of the
+			// roll the scene is only 110 tall, so the scale has to be large enough
+			// that the short side still covers the card's width (no black corners).
+			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(-60), Left: core.Pt(-60), Right: core.Pt(-60), Bottom: core.Pt(-60),
+				Animated: &core.AnimatedStyle{Rotate: roll, Scale: constant(cx, 2.5)}},
 				Children: []core.Node{camScene(core.RGB(0x1b3a5c), core.RGB(0x152436), camLayers{})}}
 		}})
 }
@@ -531,24 +532,23 @@ func c2Montage(cx *core.Scope) core.Node {
 						Figure: &core.AnimatedStyle{TranslateX: lerp(p, float64(i*6), float64(i*6+14))},
 					})}})
 			}
-			day := core.NewSignal(cx, "DAY 01")
-			cx.AfterFunc(30*ms, func() {
-				for i := 1; i <= 30; i++ {
-					d := i
-					cx.AfterFunc(time.Duration(d)*80*ms, func() {
-						label := "DAY "
-						if d < 10 {
-							label += "0"
-						}
-						day.Set(label + itoa(d))
-					})
+			const days = 30
+			var dayLayers []core.Node
+			for d := 1; d <= days; d++ {
+				label := "DAY "
+				if d < 10 {
+					label += "0"
 				}
-			})
+				label += itoa(d)
+				dayLayers = append(dayLayers, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
+					AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter,
+					Animated: &core.AnimatedStyle{Opacity: seqFade(p, d-1, days-1, 1.0, 0.006)}},
+					Children: []core.Node{core.Text{Content: label, Style: core.Style{FontSize: 8, Color: core.RGB(0xffd27a)}}}})
+			}
 			stamp := core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(6), Right: core.Pt(8),
 				Padding: core.Edges{Top: 2, Right: 5, Bottom: 2, Left: 5}, Background: core.RGB(0x0a1018), CornerRadius: 3},
 				Children: []core.Node{
-					core.Text{ContentFunc: func() string { return day.Get() },
-						Style: core.Style{FontSize: 8, Color: core.RGB(0xffd27a)}},
+					core.View{Style: core.Style{Position: core.Relative, Width: core.Pt(40), Height: core.Pt(10)}, Children: dayLayers},
 				}}
 			return core.View{Style: stageFill, Children: append(append([]core.Node{}, shots...), stamp)}
 		}})

@@ -265,11 +265,15 @@ func lp2Spotlight(cx *core.Scope) core.Node {
 						lpText(140, colLine, nil), lpText(110, colLine, nil), lpText(160, colLine, nil), lpText(90, colLine, nil),
 					}},
 				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
-					Background: core.RGB(0x05080d), Opacity: core.Alpha(0.8)}},
-				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(40), Left: core.Pt(0), Width: core.Pt(90), Height: core.Pt(90),
-					CornerRadius: 45, Background: colWell, BorderWidth: 1, BorderColor: colAmber,
-					Animated: &core.AnimatedStyle{TranslateX: core.Interpolate(path, core.Interpolation{Input: []float64{0, 1}, Output: []float64{30, 150}}),
-						Opacity: constant(cx, 0.85)}}},
+					Background: core.RGB(0x05080d), Opacity: core.Alpha(0.72)}},
+				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(2), Left: core.Pt(0), Width: core.Pt(120), Height: core.Pt(120),
+					Animated: &core.AnimatedStyle{TranslateX: core.Interpolate(path, core.Interpolation{Input: []float64{0, 1}, Output: []float64{20, 150}})}}, Children: []core.Node{
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Width: core.Pt(120), Height: core.Pt(120), CornerRadius: 60, Background: core.RGB(0xffd27a), Opacity: core.Alpha(0.05)}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(12), Left: core.Pt(12), Width: core.Pt(96), Height: core.Pt(96), CornerRadius: 48, Background: core.RGB(0xffd98a), Opacity: core.Alpha(0.06)}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(24), Left: core.Pt(24), Width: core.Pt(72), Height: core.Pt(72), CornerRadius: 36, Background: core.RGB(0xffe2a4), Opacity: core.Alpha(0.08)}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(36), Left: core.Pt(36), Width: core.Pt(48), Height: core.Pt(48), CornerRadius: 24, Background: core.RGB(0xffeec8), Opacity: core.Alpha(0.11)}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Width: core.Pt(120), Height: core.Pt(120), CornerRadius: 60, BorderWidth: 1, BorderColor: colAmber, Opacity: core.Alpha(0.30)}},
+				}},
 			)
 		}})
 }
@@ -515,19 +519,20 @@ func lp2Countdown(cx *core.Scope) core.Node {
 	return Fx(cx, FxSpec{ID: "164", Width: 300, Title: "Countdown", Duration: 2600 * ms, Accent: colAmber, Height: 110,
 		Note: "Each digit rolls the same distance; the last one changes colour instead of moving faster, because time does not speed up.",
 		Stage: func(p *core.AnimatedValue) core.Node {
-			roll := core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 6}})
+			roll := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.28, 0.36, 0.62, 0.7, 1},
+				Output: []float64{0, 0, -40, -40, -80, -80}, Easing: bezier(core.EaseInOut)})
 			var cells []core.Node
 			for i := 0; i < 3; i++ {
 				cells = append(cells, core.View{Style: core.Style{Width: core.Pt(30), Height: core.Pt(40), CornerRadius: 5, Background: colWell,
 					Overflow: core.Hidden, AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter}, Children: []core.Node{
-					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0),
-						Animated: &core.AnimatedStyle{TranslateY: core.Interpolate(roll, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -140}})}},
+					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0),
+						AlignItems: core.AlignCenter, Animated: &core.AnimatedStyle{TranslateY: roll}},
 						Children: []core.Node{
-							core.View{Style: core.Style{Height: core.Pt(20), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
+							core.View{Style: core.Style{Height: core.Pt(40), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
 								Children: []core.Node{Word("3", 15, colAmber, nil)}},
-							core.View{Style: core.Style{Height: core.Pt(20), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
+							core.View{Style: core.Style{Height: core.Pt(40), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
 								Children: []core.Node{Word("2", 15, colAmber, nil)}},
-							core.View{Style: core.Style{Height: core.Pt(20), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
+							core.View{Style: core.Style{Height: core.Pt(40), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
 								Children: []core.Node{Word("1", 15, colPink, nil)}},
 						}},
 				}})
@@ -602,14 +607,16 @@ func lp2ScrollCue(cx *core.Scope) core.Node {
 			fall := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.7, 1}, Output: []float64{0, 16, 16}})
 			byebye := core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.55, 1}, Output: []float64{1, 1, 0}})
 			return lpFrame(true,
-				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(28), Left: core.Pt(0), Right: core.Pt(0),
+				core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(26), Left: core.Pt(0), Right: core.Pt(0),
 					AlignItems: core.AlignCenter, Gap: 6}, Children: []core.Node{
 					lpText(90, colText, nil),
 					lpText(60, colMuted, nil),
 					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(64), Left: core.Pt(0), Right: core.Pt(0),
-						AlignItems: core.AlignCenter, Animated: &core.AnimatedStyle{TranslateY: fall, Opacity: byebye}}, Children: []core.Node{
-						core.View{Style: core.Style{Width: core.Pt(9), Height: core.Pt(9), BorderWidth: 2, BorderColor: colMuted,
-							Animated: &core.AnimatedStyle{Rotate: constant(cx, 45)}}},
+						AlignItems: core.AlignCenter, Animated: &core.AnimatedStyle{Opacity: byebye}}, Children: []core.Node{
+						core.View{Style: core.Style{Width: core.Pt(20), Height: core.Pt(30), CornerRadius: 10, BorderWidth: 2, BorderColor: colText}, Children: []core.Node{
+							core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(5), Left: core.Pt(0), Right: core.Pt(0),
+								AlignItems: core.AlignCenter, Animated: &core.AnimatedStyle{TranslateY: fall}}, Children: []core.Node{Disc(4, colText, nil)}},
+						}},
 					}},
 				}},
 			)
