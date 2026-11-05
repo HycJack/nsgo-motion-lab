@@ -15,7 +15,6 @@
 | `references/animation.md` | 动画：两套时钟、`AnimatedStyle`、曲线、弹簧、shader 驱动的动效 |
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
-| `tools/install-skill.ps1` | 把这个仓库装成 `~/.dsh/skills/nsgo` |
 
 仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
 
@@ -32,11 +31,21 @@
 
 ## 装技能
 
-```sh
-pwsh -File tools\install-skill.ps1
+DSH 启动时扫 `~/.dsh/skills/*/SKILL.md`，把技能目录指到 checkout 就行（改仓库即改技能）：
+
+```bat
+mklink /J "%USERPROFILE%\.dsh\skills\nsgo" "%CD%"
 ```
 
-Windows 上优先建目录 junction（改仓库即改技能），被占用时退回复制。装完新开一个 DSH 会话，`nsgo` 技能就在目录里了。
+不建链接也行，把两份东西复制过去：
+
+```bat
+mkdir "%USERPROFILE%\.dsh\skills\nsgo" 2>nul
+copy SKILL.md "%USERPROFILE%\.dsh\skills\nsgo\"
+xcopy /E /I references "%USERPROFILE%\.dsh\skills\nsgo\references"
+```
+
+装完新开一个 DSH 会话，`nsgo` 技能就在目录里了。注意两点：目录名和 frontmatter 的 `name` 都叫 `nsgo`；如果那个路径已经存在且**正在被删**（Windows 会一直回 `Access is denied`），等占用它的进程退出再装。
 
 ## 跑 lab
 
