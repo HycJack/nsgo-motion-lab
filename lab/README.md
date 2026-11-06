@@ -275,3 +275,15 @@ Kage 就是 Go 语法的 GLSL 分片着色器：入口 `Fragment(dst vec4, pos v
 - 同一张卡片里的 `chip` 文字不能重复，`nsgotest` 的 `text:` 选择器会撞车——用 `id:`。
 - **绝对定位的子节点不撑父节点**：一个只有绝对子节点的 `View`（没有 `Position`、没有 `Width/Height`）量出来是 0×0，里面的东西全被裁掉。192 张卡片里有 57 张一开始就是这么写的，画出来是一片空白。统一改成 `stageFill`（`Absolute` + 四边 0）就好了。
 - **`AnimatedStyle` 的每个字段都是接口，不是数字**：`Scale: 1` 编译不过，`Scale: constant(cx, 1)` 才行；同理静态色要写成 `solid(cx, col)`（一个两端同色的 `Interpolate`）。`Width`/`Height` 不在 `AnimatedStyle` 里，要动宽度就动固定宽度元素的 `ScaleX`。
+
+## 出片：`filmkit` + `showreel` + `shots/film.js`
+
+把动效场景渲染成 mp4 的通用管线——`atlasintro` 与 `showreel` 都走这条路：
+
+1. **场景读 `filmkit.Now()`**，不读平台时钟。`filmkit` 的 web 时钟（`clock_js.go`）认 JS 全局 `__filmT`：录帧器设成几，场景就画第几秒；native 端自动退化为墙钟（`clock_other.go`），同一份代码两边跑。
+2. **`shots/film.js` 逐帧拍**：`node shots/film.js <url> <outDir> <durSec> [fps]`——无头 Chrome 起 CDP，逐帧设 `__filmT`、双 rAF 同步、截图进 `<outDir>/frames/`，最后 ffmpeg 拼成 `<outDir>/film.mp4`（`ENCODE=0` 只出帧）。因为时间是设定值不是墙钟，帧率无关、可重跑复现，截图慢半拍也不影响画面内容。
+3. **`filmkit/time.go` 是时间窗数学**：`Seg(t,a,b)` 把每一段动效归一到 0–1，`EaseOut`/`EaseInOut`/`EaseOutBack` 管缓动，`Win(t,a,b,ramp)` 管整场淡入淡出——16 秒的片子全部是这些函数的纯函数。
+
+`showreel/` 是第一个按这套写的场景：16 秒、五幕（标题打字机 → CANVAS 双波 → MOTION 药丸+翻卡 → 3D 线框旋转 → 落版），1920×1080@30fps 共 480 帧一帧不缺。成品在仓库外的 `atlas-video/MotionLab_Showreel.mp4`。
+
+> 在 DSH/受限沙箱里，无头 Chrome 会因子进程崩溃（SIGTRAP）活不过十几秒，`film.js` 在这类宿主机上跑不完——这是沙箱的问题，不是脚本的问题；在普通机器上直接用即可，沙箱内可改由宿主自带的浏览器驱动逐帧截屏后再 ffmpeg。
