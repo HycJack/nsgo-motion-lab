@@ -20,7 +20,13 @@ import (
 )
 
 func uikitPage(cx *core.Scope) core.Node {
-	return core.View{Style: stageFill, Children: []core.Node{
+	// A plain flow view, like every other page: the page's height must be
+	// its content's height, or the app's scroll view has nothing to
+	// overflow and everything below the first screenful is clipped.
+	// (stageFill would pin the page to the scroll viewport with
+	// Top/Bottom 0 — absolute resolves against the viewport, not the
+	// content — and the tiles from 049 on would never be reachable.)
+	return core.View{Children: []core.Node{
 		core.View{Style: core.Style{Padding: core.Edges{Top: 14, Right: 18, Left: 18}}, Children: []core.Node{
 			note("Names and timings from the ui pack of motion-prompt (github.com/showheyohtaki/motion-prompt). The code is NSGo's own."),
 		}},
