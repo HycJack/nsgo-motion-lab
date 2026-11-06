@@ -57,7 +57,7 @@ func lp2Timeline(cx *core.Scope) core.Node {
 			for i := 0; i < 4; i++ {
 				at := 0.1 + 0.2*float64(i)
 				on := core.Interpolate(p, core.Interpolation{Input: []float64{at, at + 0.12}, Output: []float64{0, 1}})
-				dots = append(dots, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(float32(24 + i*18) - 3)),
+				dots = append(dots, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(float32(24+i*18) - 3)),
 					Left: core.Pt(20), Animated: &core.AnimatedStyle{Scale: core.Interpolate(on, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0.7, 1.15}})}},
 					Children: []core.Node{Disc(8, colCyan, &core.AnimatedStyle{Opacity: core.Interpolate(on, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0.25, 1}})})}})
 			}
@@ -168,7 +168,7 @@ func lp2Scrollspy(cx *core.Scope) core.Node {
 			x := core.Interpolate(stop, core.Interpolation{Input: []float64{0, 1, 2, 3}, Output: []float64{0, 42, 84, 126}, Easing: bezier(core.EaseInOut)})
 			var tabs []core.Node
 			for i := 0; i < 4; i++ {
-				tabs = append(tabs, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(core.Points(float32(i*42))),
+				tabs = append(tabs, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(core.Points(float32(i * 42))),
 					Width: core.Pt(42), AlignItems: core.AlignCenter}, Children: []core.Node{lpText(24, colMuted, nil)}})
 			}
 			return lpFrame(true,

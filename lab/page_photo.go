@@ -98,7 +98,7 @@ func phBacklight(cx *core.Scope) core.Node {
 				phScene(core.RGB(0x2a3f5c), core.RGB(0x1b2a3c), core.AnimatedStyle{TranslateX: lerp(behind, 60, 74), TranslateY: lerp(behind, 20, 26)},
 					phLayers{Head: &core.AnimatedStyle{Background: core.Interpolate(behind, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 1},
 						Colors: []core.Color{core.RGB(0xd9b79a), core.RGB(0x6a5546)}}),
-						}}),
+					}}),
 				phScrim(core.RGB(0xffb070), core.Interpolate(behind, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 0.28}})),
 			}}
 		}})
@@ -312,7 +312,7 @@ func phPanning(cx *core.Scope) core.Node {
 				lines = append(lines, core.View{Style: core.Style{Position: core.Absolute,
 					Top: core.Pt(core.Points(float32(22 + i*14))), Left: core.Pt(0), Width: core.Pt(90), Height: core.Pt(2),
 					Background: core.RGB(0x24303f),
-					Animated: &core.AnimatedStyle{TranslateX: core.Interpolate(streak, core.Interpolation{Input: []float64{60, -60}, Output: []float64{60 * float64(i+1), -60 * float64(i+1)}})}}})
+					Animated:   &core.AnimatedStyle{TranslateX: core.Interpolate(streak, core.Interpolation{Input: []float64{60, -60}, Output: []float64{60 * float64(i+1), -60 * float64(i+1)}})}}})
 			}
 			return core.View{Style: stageFill, Children: append([]core.Node{
 				phScene(core.RGB(0x2a3f5c), core.RGB(0x1b2a3c), core.AnimatedStyle{TranslateX: streak}, phLayers{}),

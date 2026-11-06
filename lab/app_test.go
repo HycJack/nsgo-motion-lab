@@ -59,6 +59,15 @@ func TestTabsSwitchPages(t *testing.T) {
 	app.Find(`text:"3D 09 · CSS 3D"`)
 	app.Press("id:chip-Replay 3D 08")
 
+	// One take: the three cards are the take, its lane map, and the same
+	// construction in 2D. Replaying the take restarts its single lane.
+	app.Press("id:tab-One take")
+	app.Find(`text:"T1 · One take · 3D"`)
+	app.Find(`text:"T2 · Lane map"`)
+	app.Find(`text:"T3 · One take · 2D"`)
+	app.Press("id:chip-Replay T1")
+	app.Press("id:chip-Replay T3")
+
 	app.Press("id:tab-Canvas")
 	app.Find("id:canvas-bars")
 }

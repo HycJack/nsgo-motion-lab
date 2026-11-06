@@ -225,6 +225,7 @@ func Fragment(dst vec4, pos vec2) vec4 {
 // rippleProgram sends a ring out from Press.xy as Press.z (the age, 0 to
 // 1) grows.
 var rippleProgram = core.MustCompileShader(rippleSource)
+
 const rippleSource = `package main
 
 var Press vec4

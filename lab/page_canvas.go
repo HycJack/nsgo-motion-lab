@@ -29,7 +29,7 @@ func canvasWave(cx *core.Scope) core.Node {
 	ticker(cx, func(t float64) { phase.Set(t) })
 	return card("Sine wave", "Draw runs again whenever a signal it read changes — here a frame loop.", colCyan,
 		core.Canvas{
-			Label: "Sine waves",
+			Label:  "Sine waves",
 			TestID: "canvas-wave",
 			Style:  well(150),
 			Draw: func(d *core.Drawing, size core.Size) {

@@ -50,6 +50,10 @@ type FxSpec struct {
 	Loop bool
 	// PingPong runs 0->1 then 1->0, forever. It wins over Loop.
 	PingPong bool
+	// Linear drives the pass at a constant rate instead of easing in and out.
+	// A take wants it: its progress has to be time, so the windows written in
+	// it can be read off a clock.
+	Linear bool
 	// Height is the stage's height in points; 96 when zero.
 	Height float32
 	// Width pins the stage to a fixed width and centres it, for effects
@@ -84,6 +88,10 @@ func Fx(cx *core.Scope, s FxSpec) core.Node {
 	play := func() {
 		p.Set(0)
 		cfg := core.TimingConfig{Duration: duration, Easing: bezier(core.EaseInOut)}
+		if s.Linear {
+			// The zero curve is the identity, so this is time itself.
+			cfg.Easing = core.Easing{Bezier: core.Linear}
+		}
 		var anim *core.Animation
 		switch {
 		case s.PingPong:

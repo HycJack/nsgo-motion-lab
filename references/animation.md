@@ -271,6 +271,55 @@ core.Canvas{Style: fill, Draw: func(d *core.Drawing, size core.Size) {
 - Painter's sort is manual: `sort.Slice` the quads by depth, then fill **opaque**
   faces or the back ones show through.
 
+## Recipe 7 — one take: many beats, no cuts
+
+A card answers "how does one move look good"; a one take answers "how do fifteen
+beats share one clock". The trick is to stop thinking in sequences and think in
+**one value plus windows**.
+
+```go
+// p: 0→1 over the whole take, LINEAR in time.
+p := core.AnimatedValue{}                                     // started by core.Timing(p, 1, cfg)
+cam := core.Interpolate(p, core.Interpolation{                // a polyline, not an orbit equation
+    Input:  []float64{0, 0.14, 0.30, 0.45, 0.60, 0.75, 0.88, 1},
+    Output: []float64{-2.60, -2.15, -1.55, -1.05, -0.45, 0.40, 1.55, 1.70},
+    Easing: core.Easing{Bezier: core.Linear},
+})
+title := core.Interpolate(p, core.Interpolation{              // a window: 3%→28%, ease inside
+    Input:  []float64{0, 0.03, 0.20, 0.28},
+    Output: []float64{0, 1, 1, 0},
+    Easing: core.Easing{Bezier: core.EaseInOut},
+})
+```
+
+- **`p` must be linear in time.** Windows are written as "second 4 to second 9",
+  so easing belongs inside each window; ease the master lane and every window
+  boundary drifts, which shows up as captions firing early.
+- **Nothing mounts, nothing unmounts.** Hidden means `Opacity 0`. An `if` that
+  removes a node re-mounts it later, and a re-mounted node starts from zero —
+  that discontinuity *is* a cut.
+- **Every caption brings its own plate.** A fragment shader cannot know what is
+  behind it; white text over an orange sphere is unreadable without a
+  `rgba(0,0,0,0.5)` plate.
+- **A camera path is a sampled polyline.** `AnimatedStyle` interpolates, it does
+  not evaluate expressions, so `Eye`/`Look`/`Fov`/`Tint` are each a lane with the
+  same stop times, and the camera eases through them.
+- **Same lane, same ground.** Anything that must not drift against the scenery
+  (a walker on a panning ridge) rides the *same* lane as that scenery.
+
+```go
+// camera as uniforms: the whole take costs zero commits
+core.Shader{Program: rayProgram, Style: fill, Uniforms: core.Uniforms{
+    "Eye":  []any{eyeX, eyeY, eyeZ},
+    "Look": []any{lookX, lookY, lookZ},
+    "Fov":  fov, "Tint": tint,
+}}
+```
+
+Draw the take's schedule once as a chart (one row per lane, windows as bars) — if
+the rows line up, there is no cut to make; if a row has to *end* before the next
+begins, that gap is where you would have cut.
+
 ## Testing motion
 
 ```go

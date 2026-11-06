@@ -143,7 +143,7 @@ func lpFeatureGrid(cx *core.Scope) core.Node {
 			var cards []core.Node
 			for i := 0; i < 6; i++ {
 				row, col := i/3, i%3
-				delay := 0.08 * float64(col) + 0.2*float64(row)
+				delay := 0.08*float64(col) + 0.2*float64(row)
 				q := core.Interpolate(p, core.Interpolation{Input: []float64{0.05 + delay, 0.35 + delay}, Output: []float64{0, 1}, Easing: bezier(core.EaseOut)})
 				cards = append(cards, core.View{Style: core.Style{Position: core.Absolute,
 					Top: core.Pt(core.Points(float32(26 + row*38))), Left: core.Pt(core.Points(float32(10 + col*78))),
@@ -355,7 +355,7 @@ func lpBento(cx *core.Scope) core.Node {
 					Animated: &core.AnimatedStyle{Opacity: q, Scale: core.Interpolate(q, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0.94, 1}})}},
 					Children: []core.Node{
 						Disc(8, []core.Color{colViolet, colCyan, colGreen, colAmber, colPink}[i], nil),
-						core.View{Style: core.Style{Margin: core.Edges{Top: 6}}, Children: []core.Node{lpText(t.w * 0.6, colLine, nil)}},
+						core.View{Style: core.Style{Margin: core.Edges{Top: 6}}, Children: []core.Node{lpText(t.w*0.6, colLine, nil)}},
 					}})
 			}
 			return lpFrame(true, core.View{Children: nodes})

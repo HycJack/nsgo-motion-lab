@@ -35,6 +35,9 @@ var pages = []pageDef{
 	// The camera packs move a picture in two dimensions; this page is the
 	// three-dimensional version of the same moves.
 	{name: "3D", view: page3D},
+	// One continuous move, written as one lane: the take, its lane map, and
+	// the same construction without a shader.
+	{name: "One take", view: pageOneTake},
 }
 
 func main() {
@@ -100,7 +103,7 @@ func titleBar(cx *core.Scope, current *core.Signal[int]) core.Node {
 	}
 	header := []core.Node{
 		core.Text{Content: "NSGo Motion Lab", Style: core.Style{FontSize: 16, FontWeight: core.FontWeightBold, Color: colText}},
-		core.Text{Content: "canvas · animation · ui · shader · 192 motion examples · 3d", Style: core.Style{FontSize: 12, Color: colFaint}},
+		core.Text{Content: "canvas · animation · ui · shader · 192 motion examples · 3d · one take", Style: core.Style{FontSize: 12, Color: colFaint}},
 	}
 	// The tabs wrap under the title on a narrow window, so they stay
 	// reachable there.

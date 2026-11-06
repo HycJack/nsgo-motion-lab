@@ -567,7 +567,7 @@ func moLightSweep(cx *core.Scope) core.Node {
 						Background: core.RGB(0xffffff),
 						Animated: &core.AnimatedStyle{TranslateX: x, Rotate: lerp(p, 20, 20),
 							Opacity: core.Interpolate(p, core.Interpolation{Input: []float64{0, 0.3, 0.7, 1}, Output: []float64{0, 0.55, 0.55, 0}}),
-							ScaleX:   core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0.4, 1}})}}},
+							ScaleX:  core.Interpolate(p, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0.4, 1}})}}},
 				}},
 			}}
 		}})

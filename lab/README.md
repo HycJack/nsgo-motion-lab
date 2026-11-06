@@ -4,7 +4,7 @@
 
 把 NSGo 的**画布（Canvas）**、**动画（Animation）**、**UI 动效**、**着色器（Shader）** 四块能力做成一个可以点、可以看、可以对照源码学习的示例应用。
 
-- **12 个页签、231 张卡片**：30 张手写的基础示例（画布 6 / 动画 4 + 16 个 preset / 着色器 4），加上 [motion-prompt](https://github.com/showheyohtaki/motion-prompt) 目录里 **8 个包、192 个动效** 的完整实现（一个不落），再加 9 张 3D 卡片。ui 包的 24 个动效里有一半是组件本身（手风琴、Toast、开关…），就写在 UI 页签里。
+- **13 个页签、234 张卡片**：30 张手写的基础示例（画布 6 / 动画 4 + 16 个 preset / 着色器 4），加上 [motion-prompt](https://github.com/showheyohtaki/motion-prompt) 目录里 **8 个包、192 个动效** 的完整实现（一个不落），再加 9 张 3D 卡片，和 3 张一镜到底的长时间轴卡片。ui 包的 24 个动效里有一半是组件本身（手风琴、Toast、开关…），就写在 UI 页签里。
 - 每张卡片都是「编号 + 名字 + 一行说明 + 可重播的舞台」，代码全部用 NSGo 自己的原语写成。
 - 桌面端 13 MB 原生窗口程序，同一份代码也能跑在 web / iOS / Android / macOS。
 - 全部示例均在本机实际运行验证过（web 走 WebGL2，截图见 `docs/`）。
@@ -34,7 +34,7 @@ go tool nsgo build -target all -output dist
 
 | 文件 | 内容 |
 | --- | --- |
-| `app.go` | 12 个页签 + `core.Shader`／`core.Scroll` 骨架，`nsgo.Run(Root, nsgo.WindowSize(1180, 860))` |
+| `app.go` | 13 个页签 + `core.Shader`／`core.Scroll` 骨架，`nsgo.Run(Root, nsgo.WindowSize(1180, 860))` |
 | `theme.go` | 调色板、以及 `card` / `grid` / `chip` / `well` / `row` / `bezier` 等 60 行的小积木 |
 | `page_canvas.go` | 6 个画布示例 |
 | `page_animation.go` | 4 个动画示例 + 16 个 `core.MotionPreset` 网格 |
@@ -47,6 +47,7 @@ go tool nsgo build -target all -output dist
 | `page_photo.go` | photo 包 097–120 |
 | `page_shader.go` | 4 个 Kage 着色器示例 |
 | `shader3d.go` · `page_3d.go` | 光线步进场景（相机＝uniform）＋ CPU 投影立方体 ＋ CSS 3D 翻面，9 张 |
+| `page_one_take.go` | 一镜到底的 3 张：18s 的相机长镜、它的时间表、12s 的 2D 视差落版 |
 | `app_test.go` | 无头测试：着色器编译 + 页签切换 + 控件交互 + 8 个动效包的首尾卡片 |
 
 ## 画布：`core.Canvas`
@@ -220,6 +221,32 @@ core.Shader{
 - **`AnimatedStyle` 里没有 `Perspective`**：透视要放在父节点的 `Style.Perspective` 上；旋转绕的是**节点自身中心**，所以一张全宽的卡片转 24° 会横跨半个屏幕——给它一个自己的尺寸。
 
 > camera 包（025–048、169–192）里 48 张有 43 张是**二维**的：它挪的是一张分层风景图，近层大动、远层小动，`027 Dolly in` 近层 ×1.5 而 `028 Zoom in` 全体 ×1.3 就是这个模型的证明。剩下 5 张做不到——`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179 POV`、`180 Over-the-shoulder` 要的是**机位在动**，图层滑动变不出另一侧的场景。这 5 张直接用 3D 页签那台光线步进相机，只是舞台高度从 150 换成 110（`shot3D.Height`），所以每个包页签的节奏没变。
+
+## 一镜到底：`page_one_take.go`
+
+卡片教的是「一段动效怎么好看」，一镜到底要的是「十几段怎么拼成一条不断的时间」。这个页签三张卡，同一条 `p: 0→1`：
+
+| 卡片 | 时长 | 演示的点 |
+| --- | --- | --- |
+| `T1 · One take · 3D` | 18 s | 一条通道喂 8 条相机 lane（`Eye`/`Look` 各 3 个分量、`Fov`、`Tint`）＋ 4 个文字窗口；机位落下、贴地穿过道具、右侧升出 |
+| `T2 · Lane map` | 静态 | 上面那张的时间表：横轴同一条 `p`，每行一个通道，窗口画成带端帽的条 |
+| `T3 · One take · 2D` | 12 s | 不用着色器：两层山脊 1:4 速度横移，走者踩近层，落版在最后三分之一 |
+
+写法就三句：
+
+```go
+// 主通道线性，窗口自己带缓动
+p    := Fx(... Linear: true ...)                        // FxSpec.Linear ⇒ core.Easing{Bezier: core.Linear}
+cam  := channel(p, core.Linear, [2]float64{0, -2.6}, [2]float64{.14, -2.15}, …)
+sub  := window(p, {0, 0}, {0.16, 0}, {0.24, 1}, {0.40, 1}, {0.48, 0})  // EaseInOut
+```
+
+- **`p` 线性**：窗口写的是「第几秒到第几秒」，缓动放在窗口内部；主通道一旦有缓动，窗口边界会跟着漂，字幕就抢跑。
+- **不挂载、不卸载**：藏起来＝`Opacity 0`。`if` 决定渲染就会重挂载，节点从零开始——那一下就是剪切。
+- **字幕自带底**：片元着色器不知道身后是什么颜色，白字压在橙色球上读不出来；每段字幕配一块半透明板（`plate()`）。
+- **相机是折线**：`AnimatedStyle` 只插值，没有表达式，所以路径是 8 个关键点连起来的速度曲线，不是轨道方程。
+
+验收方式是拍出来看的，不是读代码推的：`shots/take.js` 用 CDP 让页面按 0.5/3/6/9/12/15/17.9 秒各截一帧（只截 canvas 那块，`scale: 1`，不然 SwiftShader 的截图耗时会把时间表吃光），逐帧看构图有没有断。
 
 ## 着色器：`core.Shader`（Kage）
 

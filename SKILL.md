@@ -140,6 +140,7 @@ Two clocks. **Commit** = Go re-renders a span (signals, `Show`/`Each`/`Dynamic`)
 | A state change (hover, press, selection, resize) | `Style.Transition` — a duration, `core.EaseOut`, and a `Properties` bitmask; no graph at all, and skipped under reduce-motion |
 | Standard entrance/exit/attention/loop | `core.Motion` + a `core.MotionPreset` (38 of them, all honour reduce-motion) |
 | Custom choreography, overlap, holds, swaps | `AnimatedStyle` + `AnimatedNode` graph (`Timing`, `Spring`, `Interpolate`, `Sequence`, `Stagger`, `Loop`) |
+| One long take: many beats on one clock, no cuts | one **linear** `0→1` lane + a window (`Interpolate`) per channel — recipe 7 in `references/animation.md` |
 | Per-pixel / infinite field / 3D | `core.Shader` uniforms as nodes — zero commits |
 | Procedural drawing | `core.Canvas` `Draw` (re-records per change) or `d.Bind` (the platform replays it, no re-record) |
 
@@ -150,6 +151,8 @@ return core.View{Style: core.Style{Animated: m.Style()}, Children: []core.Node{c
 ```
 
 Five rules worth more than the API: **(1)** never read a signal or animated value in render — closures or `AnimatedStyle` only; **(2)** restyle instead of rebuild; **(3)** a finite animation *holds* its last value, so the frame at the end must be the readable one (a loop that returns to its start looks blank once it settles); **(4)** an animated element needs a measured parent — an all-absolute `View` measures 0×0 and clips everything; **(5)** `AnimatedStyle` fields are `AnimatedNode`s, not numbers (`core.Constant(1)`, not `1`), and it has no `Width`/`Height`/`Perspective`.
+
+For anything longer than one beat, the whole take is a single **linear** `0→1` value and every channel is a window on it. Hide by `Opacity 0`, never by unmounting: a re-mounted node restarts from zero, and that discontinuity is exactly a cut. Ease inside each window, not on the master lane — an eased master drifts every window boundary.
 
 Read `references/animation.md` before writing any animation: preset table, easing/duration numbers that worked, choreography recipes, shader-and-canvas motion, 3D (ray marching), testing, and a symptom→cause table for motion bugs.
 

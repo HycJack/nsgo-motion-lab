@@ -193,7 +193,7 @@ func m2Path(cx *core.Scope) core.Node {
 			for i := 0; i < 7; i++ {
 				t := float64(i) / 6
 				dots = append(dots, core.View{Style: core.Style{Position: core.Absolute,
-					Top: core.Pt(core.Points(float32(80 - 34*math.Sin(t*math.Pi*2)))),
+					Top:  core.Pt(core.Points(float32(80 - 34*math.Sin(t*math.Pi*2)))),
 					Left: core.Pt(core.Points(float32(8 + 110*t)))}, Children: []core.Node{Disc(2, core.RGB(0x2f4256), nil)}})
 			}
 			return uipScreen(150, 96, append([]core.Node{
@@ -233,8 +233,8 @@ func m2StopMotion(cx *core.Scope) core.Node {
 					Input:  []float64{t0, t0 + 0.06},
 					Output: []float64{0, 1},
 				})
-				star = append(star, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(float32(30-14*jitter))),
-					Left: core.Pt(core.Points(float32(6 + 19*float64(i)))),
+				star = append(star, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(float32(30 - 14*jitter))),
+					Left:     core.Pt(core.Points(float32(6 + 19*float64(i)))),
 					Animated: &core.AnimatedStyle{Scale: step, Rotate: constant(cx, 12*jitter)}}, Children: []core.Node{Disc(11, colAmber, nil)}})
 			}
 			return uipScreen(150, 96, append([]core.Node{
@@ -385,7 +385,7 @@ func m2Repeater(cx *core.Scope) core.Node {
 				q := core.Interpolate(p, core.Interpolation{Input: []float64{delay, 0.5 + delay, 1}, Output: []float64{0.7, 1.15, 0.7}})
 				ang := 45.0 * float64(i)
 				ring = append(ring, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(core.Points(float32(40 - 30*math.Sin(ang*math.Pi/180)))),
-					Left: core.Pt(core.Points(float32(40 + 30*math.Cos(ang*math.Pi/180)))),
+					Left:     core.Pt(core.Points(float32(40 + 30*math.Cos(ang*math.Pi/180)))),
 					Animated: &core.AnimatedStyle{Scale: q, Rotate: constant(cx, ang)}},
 					Children: []core.Node{Panel(9, 9, colCyan, nil)}})
 			}
@@ -413,7 +413,7 @@ func m2Kaleidoscope(cx *core.Scope) core.Node {
 					Children: []core.Node{
 						core.View{Style: core.Style{Width: core.Pt(6), Height: core.Pt(34), CornerRadius: 3,
 							Background: []core.Color{colViolet, colPink, colCyan, colBlue}[i%4],
-							Animated: &core.AnimatedStyle{Scale: grow, TranslateY: constant(cx, -22)}}},
+							Animated:   &core.AnimatedStyle{Scale: grow, TranslateY: constant(cx, -22)}}},
 					}})
 			}
 			return core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
@@ -509,9 +509,9 @@ func m2Curl(cx *core.Scope) core.Node {
 					core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0), Left: core.Pt(0), Right: core.Pt(0), Bottom: core.Pt(0),
 						Background: core.RGB(0xf2e6cf),
 						Animated: &core.AnimatedStyle{TranslateX: core.Interpolate(lift, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, 240}}),
-							Rotate:   core.Interpolate(lift, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -8}}),
-							ScaleY:   core.Interpolate(lift, core.Interpolation{Input: []float64{0, 1}, Output: []float64{1, 0.86}}),
-							Opacity:  core.Interpolate(lift, core.Interpolation{Input: []float64{0.7, 1}, Output: []float64{1, 0.2}})}},
+							Rotate:  core.Interpolate(lift, core.Interpolation{Input: []float64{0, 1}, Output: []float64{0, -8}}),
+							ScaleY:  core.Interpolate(lift, core.Interpolation{Input: []float64{0, 1}, Output: []float64{1, 0.86}}),
+							Opacity: core.Interpolate(lift, core.Interpolation{Input: []float64{0.7, 1}, Output: []float64{1, 0.2}})}},
 						Children: []core.Node{
 							core.View{Style: core.Style{Padding: core.Edges{Top: 16, Left: 14}}, Children: []core.Node{
 								Word("page one", 12, core.RGB(0x3a3324), nil),
@@ -609,7 +609,7 @@ func m2Split(cx *core.Scope) core.Node {
 				// frame is the same gesture three times, a beat apart.
 				grow := core.Interpolate(p, core.Interpolation{Input: []float64{0.1 + 0.2*float64(i), 0.5 + 0.2*float64(i)}, Output: []float64{0.05, 1}})
 				panels = append(panels, core.View{Style: core.Style{Position: core.Absolute, Top: core.Pt(0),
-					Left: core.Pt(core.Points(float32(i*176))), Width: core.Pt(176), Height: core.Pt(110),
+					Left: core.Pt(core.Points(float32(i * 176))), Width: core.Pt(176), Height: core.Pt(110),
 					Background: col, Overflow: core.Hidden,
 					Animated: &core.AnimatedStyle{ScaleX: grow}},
 					Children: []core.Node{

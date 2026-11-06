@@ -233,7 +233,7 @@ func uiDropdown(cx *core.Scope) core.Node {
 					Width: core.Pt(120), Height: core.Pt(20), CornerRadius: 5,
 					BorderWidth: 2, Background: core.RGB(0x0e1622),
 					Animated: &core.AnimatedStyle{BorderColor: core.Interpolate(open, core.Interpolation{
-						Input: []float64{0, 1},
+						Input:  []float64{0, 1},
 						Output: []float64{0, 1},
 						Colors: []core.Color{uipLine, uipBlue},
 					})},
@@ -499,7 +499,7 @@ func uiMega(cx *core.Scope) core.Node {
 				}, Children: []core.Node{
 					core.View{Style: core.Style{
 						Width: core.Pt(210), Background: uipPaper, CornerRadius: 6,
-						Padding: core.Edges{Top: 8, Right: 10, Bottom: 8, Left: 10},
+						Padding:   core.Edges{Top: 8, Right: 10, Bottom: 8, Left: 10},
 						Direction: core.Row, Gap: 8, AlignItems: core.AlignStart,
 					}, Children: cols},
 				}},

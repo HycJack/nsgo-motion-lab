@@ -55,9 +55,9 @@ type easingRace struct{}
 
 func (easingRace) Render(cx *core.Scope) core.Node {
 	defs := []struct {
-		name  string
-		ease  core.Easing
-		col   core.Color
+		name string
+		ease core.Easing
+		col  core.Color
 	}{
 		{"linear", bezier(core.Linear), colFaint},
 		{"ease", bezier(core.Ease), colCyan},
@@ -182,7 +182,7 @@ func compositionDemo(cx *core.Scope) core.Node {
 	}
 	return card("Composition", "Stagger, Sequence and Loop compose animations; each step starts where the last ended.", colBlue,
 		core.View{
-			Style: core.Style{Height: core.Pt(96), Background: colWell, CornerRadius: 10, Direction: core.Row, AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter, Gap: 10},
+			Style:    core.Style{Height: core.Pt(96), Background: colWell, CornerRadius: 10, Direction: core.Row, AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter, Gap: 10},
 			Children: cells,
 		},
 		row(8,

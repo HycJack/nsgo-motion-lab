@@ -308,10 +308,10 @@ func stepperCard(cx *core.Scope) core.Node {
 
 	button := func(label, id string, d int) core.Node {
 		return base.Button{
-			Label:   label,
-			TestID:  id,
-			OnPress: func(core.PressEvent) { bump(d) },
-			Style:   core.Style{Width: core.Pt(28), Height: core.Pt(28), CornerRadius: 8, Background: core.RGBA(0xffffff, 0.08), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
+			Label:    label,
+			TestID:   id,
+			OnPress:  func(core.PressEvent) { bump(d) },
+			Style:    core.Style{Width: core.Pt(28), Height: core.Pt(28), CornerRadius: 8, Background: core.RGBA(0xffffff, 0.08), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter},
 			Children: []core.Node{core.Text{Content: label, Style: core.Style{FontSize: 14, Color: colText}}},
 		}
 	}
@@ -450,7 +450,7 @@ func spinnerCard(cx *core.Scope) core.Node {
 	tick := core.View{Style: core.Style{
 		Width: core.Pt(34), Height: core.Pt(34), CornerRadius: 17, Background: core.RGBA(0x39d98a, 0.18),
 		AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter,
-		Animated:   &core.AnimatedStyle{Scale: check},
+		Animated: &core.AnimatedStyle{Scale: check},
 	}, Children: []core.Node{core.Text{Content: "ok", Style: core.Style{FontSize: 12, Color: colGreen}}}}
 
 	return card("Spinner · #070", "A little over one turn per second; press Finish to swap it for a check.", colCyan,
