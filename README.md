@@ -4,7 +4,7 @@
 
 规矩不是想出来的，是从 lab 里踩出来的。
 
-![motion-prompt 目录的 192 个动效](lab/docs/pack-motion.png)
+![motion-prompt 目录的 192 个动效](lab/docs/pack-motion.gif)
 
 ## 目录
 
@@ -71,8 +71,8 @@ go tool nsgo build -target windows_x64 .                # 打出 dist/
 
 camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179 POV`、`180 Over-the-shoulder`）不满足于二维近似，直接跑在光线步进场景上——相机只是一组 uniform，平台按帧推进，零 commit：
 
-![camera 包里跑在 3D 场景上的三张](lab/docs/camera-3d-three.png)
-![3D 页签](lab/docs/pack-3d.png)
+![camera 包里跑在 3D 场景上的三张](lab/docs/camera-3d-three.gif)
+![3D 页签](lab/docs/pack-3d.gif)
 
 ## 一镜到底
 
@@ -88,7 +88,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 2. **什么都不挂载、什么都不卸载**。藏起来就是 `Opacity 0`。一旦有 `if` 决定渲染，时间就断了：重新挂载的节点从零开始，那一下就是剪切。
 3. **字幕自带底**。片元着色器不知道身后是什么颜色，20pt 白字压在橙色球上读不出来；每段字幕配一块 `RGBA(0,0,0,0.5)` 的板。
 
-![One take 页签](lab/docs/pack-onetake.png)
+![One take 页签](lab/docs/pack-onetake.gif)
 
 ## 已验证的事实
 

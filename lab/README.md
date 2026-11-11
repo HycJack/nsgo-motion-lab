@@ -7,9 +7,9 @@
 - **13 个页签、234 张卡片**：30 张手写的基础示例（画布 6 / 动画 4 + 16 个 preset / 着色器 4），加上 [motion-prompt](https://github.com/showheyohtaki/motion-prompt) 目录里 **8 个包、192 个动效** 的完整实现（一个不落），再加 9 张 3D 卡片，和 3 张一镜到底的长时间轴卡片。ui 包的 24 个动效里有一半是组件本身（手风琴、Toast、开关…），就写在 UI 页签里。
 - 每张卡片都是「编号 + 名字 + 一行说明 + 可重播的舞台」，代码全部用 NSGo 自己的原语写成。
 - 桌面端 13 MB 原生窗口程序，同一份代码也能跑在 web / iOS / Android / macOS。
-- 全部示例均在本机实际运行验证过（web 走 WebGL2，截图见 `docs/`）。
+- 全部示例均在本机实际运行验证过（web 走 WebGL2，下面的动图都来自 `docs/`，循环播放的就是它们在实时跑的样子）。
 
-![画布](docs/canvas.png)
+![画布](docs/canvas.gif)
 
 ## 运行
 
@@ -63,7 +63,7 @@ go tool nsgo build -target all -output dist
 | Clipping | `Save / Arc / Clip / Restore`，斜条纹只画在圆里 |
 | Hit testing | `PathContains` 命中测试，点圆返回它的名字 |
 
-![着色器](docs/shader.png)
+![着色器](docs/shader.gif)
 
 ## 动画：`core.Timing` 家族
 
@@ -75,13 +75,13 @@ go tool nsgo build -target all -output dist
 | Composition | `core.Stagger` + `core.Sequence` + `core.Loop` 组合出交错波纹 |
 | Motion presets | 16 个 `core.MotionPreset`，`core.NewMotion(cx, nil)` → `motion.Play(preset.Spec())` → `Style.Animated: motion.Style()` |
 
-![动画](docs/animation.png)
+![动画](docs/animation.gif)
 
 动画只改 `core.AnimatedStyle`（`TranslateX/Y`、`Scale`、`Rotate`、`Opacity`…）或 `core.AnimatedValue`，**一帧一个 commit**，不重跑 `Render`。
 
 ## UI 动效：组件级的动效怎么做
 
-![UI 动效](docs/uikit.png)
+![UI 动效](docs/uikit.gif)
 
 这 12 张卡片的**名字和时长**取自 [motion-prompt](https://github.com/showheyohtaki/motion-prompt)（MIT，一个「动效命名库」，8 个包共 192 个动效），代码全部用 NSGo 自己的原语重写——那个库的用途就是给这些效果起名，照着名字写即可。
 
@@ -100,7 +100,7 @@ go tool nsgo build -target all -output dist
 | Tabs · #057 | 下划线 `Absolute` + `TranslateX` 250ms；内容 `Opacity` 交叉淡入 |
 | Carousel · #058 | 整条 `Row` 的 `TranslateX` 做位移，圆点用 `StyleFunc` 跟着索引变色 |
 
-![UI 动效交互](docs/uikit-live.png)
+![UI 动效交互](docs/uikit-live.gif)
 
 ## 192 个动效：motion-prompt 目录的完整实现
 
@@ -119,7 +119,7 @@ go tool nsgo build -target all -output dist
 
 复用范围只有**名字、分类和时长**：代码全部是 NSGo 自己的原语（`core.View` + `core.AnimatedStyle` + `core.Interpolate`），没有移植任何一行上游代码。
 
-![motion 包](docs/pack-motion.png)
+![motion 包](docs/pack-motion.gif)
 
 每张卡片都走同一个驱动器，所以第 193 个动效也只需要写 `Stage`：
 
@@ -144,8 +144,8 @@ return Fx(cx, FxSpec{
 2. **p == 1 的那一帧必须还能看**：卡片播完就停在 1，不会循环。凡是「出去再回来」的动效（Pixelate、Exploded view、Montage 的最后一格）都要让终点是最终状态，而不是起点。
 3. **颜色插值的两端都要不透明**：`Interpolation.Colors` 里塞带 alpha 的颜色会渲染成接近纯色，不是半透明。
 
-![camera 包](docs/pack-camera.png)
-![photo 包](docs/pack-photo.png)
+![camera 包](docs/pack-camera.gif)
+![photo 包](docs/pack-photo.gif)
 
 两条贯穿所有卡片的规则：
 
@@ -154,7 +154,7 @@ return Fx(cx, FxSpec{
 
 汉堡菜单按下去之后（三条线变叉、面板从上方落下）：
 
-![汉堡菜单](docs/uikit-menu.png)
+![汉堡菜单](docs/uikit-menu.gif)
 
 ## 3D：NSGo 能做 3D 场景吗
 
@@ -168,7 +168,7 @@ return Fx(cx, FxSpec{
 
 「3D」页签把三条路各做了一遍：
 
-![3D 场景](docs/pack-3d.png)
+![3D 场景](docs/pack-3d.gif)
 | 卡片 | 演示的点 |
 | --- | --- |
 | 3D 01 Ray-marched scene | 三个球 + 一个立方体 + 地面，96 步光线步进，软阴影靠 `shadowAt` 走一遍距离场 |
@@ -193,8 +193,8 @@ return Fx(cx, FxSpec{
 
 写这几张时唯一的新坑：**穿场镜头不能只看前方**。第一版让 `Look` 钉在场景前方，飞过去之后画面就只剩空地——引擎没坏，是取景没了。改成「看向点钉在场景中心、机位斜穿过去」，终点自然落在场景背面，全程都有东西可看。
 
-![camera 包里的两张真 3D 镜头：030 Orbit、031 Crane up](docs/camera-3d-two.png)
-![camera2 包里的三张真 3D 镜头：176 Fly-through、179 POV、180 Over-the-shoulder](docs/camera-3d-three.png)
+![camera 包里的两张真 3D 镜头：030 Orbit、031 Crane up](docs/camera-3d-two.gif)
+![camera2 包里的三张真 3D 镜头：176 Fly-through、179 POV、180 Over-the-shoulder](docs/camera-3d-three.gif)
 
 相机运动就是四个 uniform 的事，全是 `AnimatedNode`，平台按帧推进，`Root` 一次都不重渲染：
 
