@@ -1,6 +1,8 @@
 package film
 
 import (
+	"math"
+
 	"github.com/oneo-me/nsgo/core"
 
 	"nsgofilm/filmkit"
@@ -82,11 +84,25 @@ func render(d *core.Drawing, size core.Size, t float64, f Film) {
 		}
 		fr.Ease = filmkit.EaseOut(fr.P)
 
+		// 几何转场参数（Wipe/Slide/Iris 的入幕包络恒 1，靠几何揭示）。
+		inP := filmkit.Seg(t, sc.A, sc.A+f.Fade)
+		offX := float32(0)
+		clipW := float32(-1) // -1 = 不裁
+		irisR := float32(-1)
+		switch sc.In {
+		case Wipe:
+			clipW = float32(inP * float64(f.W))
+		case Iris:
+			irisR = float32(inP*math.Hypot(float64(f.W)/2, float64(f.H)/2)) + 1
+		case Slide:
+			offX = float32((1 - inP) * float64(f.W))
+		}
+
 		// 进出包络：Cross/Cut 是两端各自独立；经底色的转场把
 		// 入场压到重叠区的后半程，底色扫瞙盖住接缝（见下）。
 		var aIn float64
 		switch sc.In {
-		case Cut:
+		case Cut, Wipe, Slide, Iris:
 			aIn = 1
 		case FadeBlack, FadeWhite:
 			aIn = filmkit.Seg(t, sc.A+f.Fade/2, sc.A+f.Fade)
@@ -109,13 +125,42 @@ func render(d *core.Drawing, size core.Size, t float64, f Film) {
 				aOut = 1 - filmkit.Seg(t, sc.B-f.Fade/2, sc.B)
 			}
 		}
+		// 下一幕是几何转场（Wipe/Iris 盖住、Slide 推走）时，
+		// 出幕保持满 alpha——遮盖/推移本身就是出场方式。
+		if i+1 < len(f.Shots) {
+			switch f.Shots[i+1].In {
+			case Wipe, Iris, Slide:
+				if t >= f.Shots[i+1].A-0.001 {
+					aOut = 1
+				}
+			}
+		}
 
 		a := aIn * aOut
 		if a <= 0.0001 {
 			continue
 		}
 		curAlpha = float32(a)
-		sc.Fn(d, fr)
+		if offX != 0 || clipW >= 0 || irisR >= 0 {
+			d.Save()
+			if offX != 0 {
+				d.Translate(offX, 0)
+			}
+			if clipW >= 0 {
+				d.BeginPath()
+				d.Rect(0, 0, clipW, f.H)
+				d.Clip()
+			}
+			if irisR >= 0 {
+				d.BeginPath()
+				d.Arc(f.W/2, f.H/2, irisR, 0, float32(2*math.Pi), false)
+				d.Clip()
+			}
+			sc.Fn(d, fr)
+			d.Restore()
+		} else {
+			sc.Fn(d, fr)
+		}
 	}
 	curAlpha = 1
 

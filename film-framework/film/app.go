@@ -45,11 +45,11 @@ func root(f Film) func(*core.Scope) core.Node {
 	return func(cx *core.Scope) core.Node {
 		f.resolve() // Duration 未填时取最晚的幕尾
 
-		filmT := core.NewSignal(cx, 0.0)     // 影片时间（秒），画布按它画
-		mediaT := core.NewSignal(cx, 0.0)    // 声音的播放位置（秒）
-		started := core.NewSignal(cx, false) // 观众点过「开始」了吗
-		playing := core.NewSignal(cx, false) // 审片模式：正在播吗
-		rate := core.NewSignal(cx, 1.0)      // 审片变速：0.5 / 1 / 2
+		filmT := core.NewSignal(cx, 0.0)                   // 影片时间（秒），画布按它画
+		mediaT := core.NewSignal(cx, 0.0)                  // 声音的播放位置（秒）
+		started := core.NewSignal(cx, false)               // 观众点过「开始」了吗
+		playing := core.NewSignal(cx, false)               // 审片模式：正在播吗
+		rate := core.NewSignal(cx, 1.0)                    // 审片变速：0.5 / 1 / 2
 		recording := recordingMode()                       // 录制器在驱动吗
 		audit := auditMode() && !recording                 // 审片模式（URL ?audit=1）
 		timeline := timelineMode() && !recording && !audit // 时间轴总览（?timeline=1）
@@ -87,7 +87,7 @@ func root(f Film) func(*core.Scope) core.Node {
 			case review && f.Audio != "" && playing.Get():
 				// 声音当主时钟：画面跟着声音走。
 				t = mediaT.Get()
-			case review && f.Audio != "" :
+			case review && f.Audio != "":
 				// 审片暂停中：跳转直接写 filmT，时钟停在原地。
 				t = filmT.Get()
 			case review && playing.Get():

@@ -21,6 +21,12 @@ const (
 	FadeBlack
 	// FadeWhite 同上，白色闪场。
 	FadeWhite
+	// Wipe 是擦除：入幕被一个从左向右扩张的矩形裁剪，逐渐盖住出幕。
+	Wipe
+	// Slide 是推挤：入幕从右侧滑入，出幕同时向左推出（画中露出 Film.Bg）。
+	Slide
+	// Iris 是圆形揭示：入幕被一个从屏幕中心扩张的圆裁剪，逐渐盖住出幕。
+	Iris
 )
 
 // Series 把按「时长」声明的幕自动排成时间轴：第一幕从 0 起，

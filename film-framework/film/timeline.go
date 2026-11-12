@@ -58,7 +58,7 @@ func timelineGrid(cx *core.Scope, f Film, filmT *core.Signal[float64], inFilm *c
 	grid := core.View{
 		Style: core.Style{
 			Direction: core.Row, Wrap: core.Wrap, AlignItems: core.AlignStart,
-			Gap:         core.Points(28),
+			Gap:          core.Points(28),
 			AlignContent: core.AlignStart,
 		},
 		Children: cards,
@@ -69,8 +69,8 @@ func timelineGrid(cx *core.Scope, f Film, filmT *core.Signal[float64], inFilm *c
 			Position: core.Absolute, Left: core.Pt(0), Right: core.Pt(0),
 			Top: core.Pt(0), Bottom: core.Pt(0),
 			Direction: core.Column, AlignItems: core.AlignStart,
-			Gap:       core.Points(24),
-			Padding:   core.All(40),
+			Gap:        core.Points(24),
+			Padding:    core.All(40),
 			Background: f.Bg,
 		},
 		Children: []core.Node{
@@ -83,7 +83,7 @@ func timelineGrid(cx *core.Scope, f Film, filmT *core.Signal[float64], inFilm *c
 				},
 			},
 			core.Scroll{
-				Style: core.Style{Width: core.Pct(100), Height: core.Pct(100)},
+				Style:    core.Style{Width: core.Pct(100), Height: core.Pct(100)},
 				Children: []core.Node{grid},
 			},
 		},
