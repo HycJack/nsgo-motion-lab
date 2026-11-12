@@ -63,9 +63,9 @@ func sceneChart(d *core.Drawing, f *film.Frame) {
 	if err != nil {
 		return
 	}
-	c := flowkit.Layout(doc, flowkit.TopToBottom, float64(dw)*0.18, float64(dh)*0.14, float64(dw)*0.64, float64(dh)*0.72)
-	const start, span = 0.5, 8.0
-	drawn := filmkit.Clamp01((f.LocalT - start) / span) * c.Duration()
+	c := flowkit.Layout(doc, flowkit.TopToBottom, float64(dw)*0.16, float64(dh)*0.14, float64(dw)*0.68, float64(dh)*0.74, d)
+	const start, span = 0.5, 8.5
+	drawn := filmkit.Clamp01((f.LocalT-start)/span) * c.Duration()
 	c.Draw(d, drawn)
 }
 

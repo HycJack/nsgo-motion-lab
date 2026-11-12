@@ -4,6 +4,8 @@ github.com/dlclark/regexp2/v2 v2.11.0 h1:z5uRPHav+eTVpoffDSuUP2KPS4f1ONZaPDK73S8
 github.com/dlclark/regexp2/v2 v2.11.0/go.mod h1:avUrQvPaLz2DrFNHJF0taWAFFX2C1GMSSoeiqFjcBmU=
 github.com/ebitengine/purego v0.11.2 h1:WWiTx8rD8zYdOwSj8O/NiNbsOvSAgJMTlyV1XlbUSeU=
 github.com/ebitengine/purego v0.11.2/go.mod h1:DCHPP08djqhNSoTfImcnHYQRZmd0qhakvrozqaEYhGQ=
+github.com/nsgo-dev/nsgo v0.0.0-20261112142707-fad7c44c132b h1:pXO7l1tFXhTRf+U1+MCJDPgc9YV+/P76b/1+NG2SATk=
+github.com/nsgo-dev/nsgo v0.0.0-20261112142707-fad7c44c132b/go.mod h1:CqPfBVvmmYVPE+6B3LHcRVr9B5kyx4GVEQWEzz1mzF4=
 github.com/oneo-me/nsgo v0.0.0-20261104142851-46c7d9c6cbbe h1:MsGHCWJeKnm78DP2f+tKdOwrwWYxHMhF5OLEvveDc0I=
 github.com/oneo-me/nsgo v0.0.0-20261104142851-46c7d9c6cbbe/go.mod h1:/N76gjtbqRbifDgo8XDPbzcxEqh0ZSbc5Y5a2XCp29c=
 github.com/oneo-me/nsgo-flow v0.0.0-20261112152158-91d096b86683 h1:il6crL7RJytigRGOeVZEgcJ/4uvaW2mjCxwdxJBaH8I=
