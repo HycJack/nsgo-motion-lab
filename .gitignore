@@ -30,3 +30,5 @@ __pycache__/
 examples/*/cylinderdemo
 examples/*/mathdemo
 examples/*/styledemo
+lab/motionlab
+lab/showreel/showreel

@@ -284,6 +284,6 @@ Kage 就是 Go 语法的 GLSL 分片着色器：入口 `Fragment(dst vec4, pos v
 2. **`shots/film.js` 逐帧拍**：`node shots/film.js <url> <outDir> <durSec> [fps]`——无头 Chrome 起 CDP，逐帧设 `__filmT`、双 rAF 同步、截图进 `<outDir>/frames/`，最后 ffmpeg 拼成 `<outDir>/film.mp4`（`ENCODE=0` 只出帧）。因为时间是设定值不是墙钟，帧率无关、可重跑复现，截图慢半拍也不影响画面内容。
 3. **`filmkit/time.go` 是时间窗数学**：`Seg(t,a,b)` 把每一段动效归一到 0–1，`EaseOut`/`EaseInOut`/`EaseOutBack` 管缓动，`Win(t,a,b,ramp)` 管整场淡入淡出——16 秒的片子全部是这些函数的纯函数。
 
-`showreel/` 是第一个按这套写的场景：16 秒、五幕（标题打字机 → CANVAS 双波 → MOTION 药丸+翻卡 → 3D 线框旋转 → 落版），1920×1080@30fps 共 480 帧一帧不缺。成品在仓库外的 `atlas-video/MotionLab_Showreel.mp4`。
+`showreel/` 现在的样片是**圆柱的侧面展开**（与 `../examples/cylinder-demo/` 同源）：20.5 秒、三幕、连续相机——环绕亮相标 r/h → 滑翔到侧视看无滑动滚动沿母线展开 → 升高俯视量 C/h 尺寸线并落版公式 S = 2πrh。1920×1080@30fps 一帧不缺，成品 `dist/film.mp4`（gitignore，用上面的命令重录），`../films/cylinder-unroll.mp4` 是同一部片子的归档。
 
 > 在 DSH/受限沙箱里，无头 Chrome 会因子进程崩溃（SIGTRAP）活不过十几秒，`film.js` 在这类宿主机上跑不完——这是沙箱的问题，不是脚本的问题；在普通机器上直接用即可，沙箱内可改由宿主自带的浏览器驱动逐帧截屏后再 ffmpeg。

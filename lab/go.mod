@@ -4,7 +4,12 @@ go 1.27.1
 
 tool github.com/oneo-me/nsgo/cmd/nsgo
 
-require github.com/oneo-me/nsgo v0.0.0-20261104142851-46c7d9c6cbbe
+require (
+	github.com/oneo-me/nsgo v0.0.0-20261104142851-46c7d9c6cbbe
+	nsgofilm v0.0.0
+)
+
+replace nsgofilm => ../film-framework
 
 require (
 	github.com/dop251/goja v0.0.0-20261027234916-5f913d1693d9 // indirect
