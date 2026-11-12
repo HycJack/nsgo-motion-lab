@@ -16,8 +16,8 @@
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
 | `film-framework/` | 拍片框架：分镜是影片时钟的纯函数，逐帧确定、可并行录制 |
-| `examples/` | 三个例子片工程：math-demo / cylinder-demo / style-demo |
-| `films/` | 三个例子录好的成片 mp4 |
+| `examples/` | 四个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo |
+| `films/` | 四个例子录好的成片 mp4 |
 
 仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
 
@@ -111,6 +111,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 - [`films/cylinder-unroll.mp4`](films/cylinder-unroll.mp4) —— 圆柱侧面展开教学片：无滑动滚动沿母线展开，C = 2πr、S = 2πrh（工程 `examples/cylinder-demo/`）
 - [`films/math-demo.mp4`](films/math-demo.mp4) —— 数学动画：导数几何意义、公式逐笔写与变形、打光鞍面 + 相机环绕（工程 `examples/math-demo/`）
 - [`films/style-demo.mp4`](films/style-demo.mp4) —— 风格画廊：六幕六风格的 PPT 式视频模版（工程 `examples/style-demo/`）
+- [`films/sort-demo.mp4`](films/sort-demo.mp4) —— 算法可视化：冒泡排序，28 次比较 13 次交换的离散事件动画（工程 `examples/sort-demo/`）
 
 快速上手（完整见 `film-framework/README.md`）：
 
