@@ -1,0 +1,13 @@
+title "登录流程"
+
+direction down
+node start "打开登录页" kind=start
+node input "输入账号密码"
+node check "校验密码" kind=decision
+node lock "连续失败 5 次，锁定账号" kind=data
+node home "进入首页" kind=end status=done
+
+start -> input
+input -> check
+check -> home "成功"
+check ..> lock "失败"

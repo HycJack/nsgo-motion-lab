@@ -16,8 +16,8 @@
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
 | `film-framework/` | 拍片框架：分镜是影片时钟的纯函数，逐帧确定、可并行录制 |
-| `examples/` | 五个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo / effects-demo |
-| `films/` | 五个例子录好的成片 mp4 |
+| `examples/` | 六个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo / effects-demo / flow-demo |
+| `films/` | 六个例子录好的成片 mp4 |
 
 仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
 
@@ -101,6 +101,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 | --- | --- |
 | `filmkit` | 影片时钟（录制器注入 / 墙钟 / 媒体时钟）+ 时间数学：Seg / Win / Pulse / Spring（闭式解）/ Bezier / KF |
 | `film` | 引擎：Film 声明（Series 自动排布、嵌套 Seq 局部时间、FadeBlack/Cut 转场、字幕自动换行、SFX 沿触发）+ 审片模式（`?audit=1`：键盘逐帧 / 变速 / 带声音跳转）+ 时间轴总览（`?timeline=1`） |
+| `flowkit` | 流程图模块：解析 nsgo-flow 的 `.flow` 文本 → 分层布局（最长路定级/紧凑行距）→ 逐节点浮现、边沿折线生长、状态语义色 |
 | `mathkit` | manim 式数学动画：2D/3D 坐标系（穿原点 / 箭头 / 刻度）、Plot / Area / Tangent、LaTeX 公式（`tools/eq.py` 预生成路径，逐笔写 / 渐变 / 最优配对变形）、打光曲面、3D 虚线 |
 | `tpl` | 17 种风格视频模版（映射 html-ppt-designer STYLES.md）：TED / Keynote / … / Neo-Tokyo，配 Title / Bullets / KPI / Quote 等预制分镜 |
 | `shots/film.js` | 录制器：多 Chrome 并行分段、断点续录、缺帧检查 |
@@ -113,6 +114,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 - [`films/style-demo.mp4`](films/style-demo.mp4) —— 风格画廊：六幕六风格的 PPT 式视频模版（工程 `examples/style-demo/`）
 - [`films/sort-demo.mp4`](films/sort-demo.mp4) —— 算法可视化：冒泡排序，28 次比较 13 次交换的离散事件动画（工程 `examples/sort-demo/`）
 - [`films/effects-demo.mp4`](films/effects-demo.mp4) —— 组合技画廊 + 转场三件套：Dolly Zoom / 签名描画 / 打字机 / 星空流星 / 进度环 / 画中画（工程 `examples/effects-demo/`）
+- [`films/flow-demo.mp4`](films/flow-demo.mp4) —— 流程图教学片：`.flow` 文本（nsgo-flow 格式）→ 分层布局 → 逐节点/逐边动画，状态语义色（工程 `examples/flow-demo/`）
 
 快速上手（完整见 `film-framework/README.md`）：
 

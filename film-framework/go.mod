@@ -2,7 +2,10 @@ module nsgofilm
 
 go 1.27.1
 
-require github.com/oneo-me/nsgo v0.0.0-20261104142851-46c7d9c6cbbe
+require (
+	github.com/oneo-me/nsgo v0.0.0-20261104142851-46c7d9c6cbbe
+	github.com/oneo-me/nsgo-flow v0.0.0-20261112152158-91d096b86683
+)
 
 require (
 	github.com/ebitengine/purego v0.11.2 // indirect
