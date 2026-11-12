@@ -1,0 +1,13 @@
+name: Cylinder Unroll
+id: dev.nsgo.cylinderdemo
+version: 0.1.0
+
+dev:
+  target: native
+  hot_reload: false
+  fps: false
+
+build:
+  output: dist
+  open: false
+  targets: [macos_arm64]

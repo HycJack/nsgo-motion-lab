@@ -20,3 +20,13 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# film pipeline 的中间产物（成片 mp4 在 films/，是交付物）
+film-framework/**/.DS_Store
+examples/*/dist/
+examples/*/out/
+lab/shots/
+__pycache__/
+examples/*/cylinderdemo
+examples/*/mathdemo
+examples/*/styledemo

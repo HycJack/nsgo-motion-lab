@@ -15,6 +15,9 @@
 | `references/animation.md` | 动画：两套时钟、`AnimatedStyle`、曲线、弹簧、shader 驱动的动效 |
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
+| `film-framework/` | 拍片框架：分镜是影片时钟的纯函数，逐帧确定、可并行录制 |
+| `examples/` | 三个例子片工程：math-demo / cylinder-demo / style-demo |
+| `films/` | 三个例子录好的成片 mp4 |
 
 仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
 
@@ -90,6 +93,36 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 
 ![One take 页签](lab/docs/pack-onetake.gif)
 
+## 拍片：film-framework
+
+一镜到底回答「一个镜头怎么不断」，`film-framework/` 回答下一层：**一部片子怎么拍**。核心约束只有一条——**分镜是影片时钟的纯函数**：同一时刻画出来的东西永远一样，所以录制成片、浏览器观看、审片单帧三者逐像素一致（`tools/diff.py` 双录逐帧哈希比对守着这个承诺）。
+
+| 包 | 是什么 |
+| --- | --- |
+| `filmkit` | 影片时钟（录制器注入 / 墙钟 / 媒体时钟）+ 时间数学：Seg / Win / Pulse / Spring（闭式解）/ Bezier / KF |
+| `film` | 引擎：Film 声明（Series 自动排布、嵌套 Seq 局部时间、FadeBlack/Cut 转场、字幕自动换行、SFX 沿触发）+ 审片模式（`?audit=1`：键盘逐帧 / 变速 / 带声音跳转）+ 时间轴总览（`?timeline=1`） |
+| `mathkit` | manim 式数学动画：2D/3D 坐标系（穿原点 / 箭头 / 刻度）、Plot / Area / Tangent、LaTeX 公式（`tools/eq.py` 预生成路径，逐笔写 / 渐变 / 最优配对变形）、打光曲面、3D 虚线 |
+| `tpl` | 17 种风格视频模版（映射 html-ppt-designer STYLES.md）：TED / Keynote / … / Neo-Tokyo，配 Title / Bullets / KPI / Quote 等预制分镜 |
+| `shots/film.js` | 录制器：多 Chrome 并行分段、断点续录、缺帧检查 |
+| `tools/` | serve.py（Range 静态服务）/ mux.py（视频 + 音轨 + SFX 合成）/ eq.py / frames.py / diff.py |
+
+三部例子成片（无声，1080p30）：
+
+- [`films/cylinder-unroll.mp4`](films/cylinder-unroll.mp4) —— 圆柱侧面展开教学片：无滑动滚动沿母线展开，C = 2πr、S = 2πrh（工程 `examples/cylinder-demo/`）
+- [`films/math-demo.mp4`](films/math-demo.mp4) —— 数学动画：导数几何意义、公式逐笔写与变形、打光鞍面 + 相机环绕（工程 `examples/math-demo/`）
+- [`films/style-demo.mp4`](films/style-demo.mp4) —— 风格画廊：六幕六风格的 PPT 式视频模版（工程 `examples/style-demo/`）
+
+快速上手（完整见 `film-framework/README.md`）：
+
+```sh
+cd film-framework && go test ./...                     # 引擎与数学包的测试
+cd ../examples/cylinder-demo
+go tool nsgo build -target web .                       # 构建
+python3 ../../film-framework/tools/serve.py "dist/Cylinder Unroll-0.1.0-web" 8099
+# 浏览器：/ 观看 · /?audit=1 审片（空格 / ← → / J L）· /?timeline=1 时间轴总览
+node ../../film-framework/shots/film.js http://127.0.0.1:8099/ out 21 30   # WORKERS=4 并行录制
+```
+
 ## 已验证的事实
 
 - `go build .`、`go vet .`、`go test .` 全过；Windows 产物 13.0 MB，能起。
@@ -97,6 +130,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 - 着色器在运行时编译，编译失败就是 panic，所以 `TestShadersCompile` 用 `core.CompileShader` 把每份源码过一遍。
 - 页签切换、UI kit 的组件状态、控件是否真的连到信号，各有测试（`TestTabsSwitchPages`、`TestUIKitControls`、`TestControlsAreLive`）。
 - 一镜到底的三张也进 `TestTabsSwitchPages`：切到 `One take` 要能摸到三张卡的标题和两个 Replay。
+- film-framework 与三个例子工程在本仓库路径下 `go vet` / `go test` / wasm 构建全过；成片以 WORKERS=4 并行录制，`tools/diff.py` 双录比对逐帧一致。
 - 「同一个镜头」是拍出来验过的，不是看着代码推的：`lab/shots/take.js` 用 CDP 在 0.5s/3s/6s/9s/12s/15s/17.9s 各截一帧，逐帧看构图有没有断（`lab/shots/` 已 gitignore）。
 
 ## 许可与致谢
