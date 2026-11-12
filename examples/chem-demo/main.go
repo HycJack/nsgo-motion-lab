@@ -160,10 +160,10 @@ func ball(d *core.Drawing, sx, sy, r float32, el string, alpha float32) {
 }
 
 // stick 画一根化学键（粗线），宽度随深度。
-func stick(d *core.Drawing, ax, ay, bx, by, depth, w float32, c core.Color, alpha float32) {
+func stick(d *core.Drawing, ax, ay, bx, by, w float32, c core.Color, alpha float32) {
 	d.SetStrokeColor(c)
 	d.SetAlpha(alpha)
-	d.SetLineWidth(w * float32(math.Max(0.55, math.Min(1.6, 10.0/float64(depth)))))
+	d.SetLineWidth(w)
 	d.SetLineCap(core.CapRound)
 	d.BeginPath()
 	d.MoveTo(ax, ay)
@@ -363,8 +363,10 @@ func drawMolecules(d *core.Drawing, a *mathkit.Axes3D, t float64, K float64, alp
 			if alpha <= 0.01 {
 				continue
 			}
-			depth := (dza + dzb) / 2
-			w := float32(0.10)
+			// ppu：这条键所在深度的「每世界单位像素」——键宽和双键
+			// 间距都按它换算，近处的键自然更粗。
+			ppu := (dza + dzb) / 2
+			w := float32(0.10 * ppu)
 			if b.order == 2 {
 				// 双键：沿屏幕垂线偏移的两根平行棍。
 				dx, dy := sb-sa, syb-sya
@@ -372,12 +374,13 @@ func drawMolecules(d *core.Drawing, a *mathkit.Axes3D, t float64, K float64, alp
 				if l < 1 {
 					continue
 				}
-				px, py := -dy/l*5, dx/l*5
-				stick(d, sa+px, sya+py, sb+px, syb+py, float32(depth), w*0.7, pale, alpha*0.95)
-				stick(d, sa-px, sya-py, sb-px, syb-py, float32(depth), w*0.7, pale, alpha*0.95)
+				off := float32(0.05 * ppu)
+				px, py := -dy/l*off, dx/l*off
+				stick(d, sa+px, sya+py, sb+px, syb+py, w*0.62, pale, alpha*0.95)
+				stick(d, sa-px, sya-py, sb-px, syb-py, w*0.62, pale, alpha*0.95)
 				continue
 			}
-			stick(d, sa, sya, sb, syb, float32(depth), w, pale, alpha)
+			stick(d, sa, sya, sb, syb, w, pale, alpha)
 		}
 	}
 
