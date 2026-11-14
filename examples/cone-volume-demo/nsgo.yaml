@@ -1,0 +1,13 @@
+name: Cone Volume
+id: dev.nsgo.conevolume
+version: 0.1.0
+
+dev:
+  target: web
+  hot_reload: false
+  fps: false
+
+build:
+  output: dist
+  open: false
+  targets: [macos_arm64]

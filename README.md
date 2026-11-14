@@ -16,8 +16,8 @@
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
 | `film-framework/` | 拍片框架：分镜是影片时钟的纯函数，逐帧确定、可并行录制 |
-| `examples/` | 六个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo / effects-demo / flow-demo |
-| `films/` | 六个例子录好的成片 mp4 |
+| `examples/` | 七个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo / effects-demo / flow-demo / cone-volume-demo |
+| `films/` | 七个例子录好的成片 mp4 |
 
 仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
 
@@ -115,6 +115,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 - [`films/sort-demo.mp4`](films/sort-demo.mp4) —— 算法可视化：冒泡排序，28 次比较 13 次交换的离散事件动画（工程 `examples/sort-demo/`）
 - [`films/effects-demo.mp4`](films/effects-demo.mp4) —— 组合技画廊 + 转场三件套：Dolly Zoom / 签名描画 / 打字机 / 星空流星 / 进度环 / 画中画（工程 `examples/effects-demo/`）
 - [`films/chem-demo.mp4`](films/chem-demo.mp4) —— 化学教学片：甲烷燃烧的球棍模型，9 个原子的飞行重排（工程 `examples/chem-demo/`）
+- [`films/cone-volume.mp4`](films/cone-volume.mp4) —— 微积分教学片：圆锥体积的切片法推导，∫₀ʰ π ρ(z)² dz = ⅓πr²h（工程 `examples/cone-volume-demo/`）
 - [`films/flow-demo.mp4`](films/flow-demo.mp4) —— 流程图教学片：`.flow` 文本（nsgo-flow 格式）→ 分层布局 → 逐节点/逐边动画，状态语义色（工程 `examples/flow-demo/`）
 
 快速上手（完整见 `film-framework/README.md`）：
