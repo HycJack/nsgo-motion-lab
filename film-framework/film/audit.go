@@ -28,7 +28,7 @@ const (
 // auditBar 搭出审片控制条。filmT 是影片时钟，playing 是播放状态，
 // media 是音频载体（无声片为 nil，进度条只推画面时钟），wake 报告
 // 「有动静」——碰控制条也算，播放中的自动倒计时重新来过。
-func auditBar(cx *core.Scope, f Film, filmT *core.Signal[float64], playing *core.Signal[bool], media *core.Ref, wake func()) core.Node {
+func auditBar(cx *core.Scope, f Film, filmT *core.Signal[float64], playing *core.Signal[bool], marks *core.Signal[[]float64], media *core.Ref, wake func()) core.Node {
 	seek := func(t float64) {
 		if f.Duration <= 0 {
 			return
@@ -85,6 +85,26 @@ func auditBar(cx *core.Scope, f Film, filmT *core.Signal[float64], playing *core
 					Background:   core.RGB(0xf2b544),
 					CornerRadius: auditRailH / 2,
 				}}
+			}),
+			// 批注刻度：C 键打的标记，金红色小竖线立在轨道上。
+			core.Dynamic(func(*core.Scope) core.Node {
+				ms := marks.Get()
+				ticks := make([]core.Node, 0, len(ms))
+				for _, m := range ms {
+					frac := filmkit.Clamp01(m / max(f.Duration, 0.001))
+					ticks = append(ticks, core.View{Style: core.Style{
+						Position:   core.Absolute,
+						Left:       core.Pt(core.Points(frac*auditTrackW - 1.5)),
+						Top:        core.Pt((auditHitH - auditRailH) / 2 - 5),
+						Width:      core.Pt(3),
+						Height:     core.Pt(auditRailH + 10),
+						Background: core.RGB(0xF87171),
+					}})
+				}
+				return core.View{Style: core.Style{
+					Position: core.Absolute, Left: core.Pt(0), Right: core.Pt(0),
+					Top: core.Pt(0), Bottom: core.Pt(0),
+				}, Children: ticks}
 			}),
 			core.Dynamic(func(*core.Scope) core.Node {
 				frac := filmkit.Clamp01(filmT.Get() / max(f.Duration, 0.001))
@@ -173,7 +193,7 @@ func auditBar(cx *core.Scope, f Film, filmT *core.Signal[float64], playing *core
 		},
 		OnHoverMove: func(core.HoverEvent) { wake() },
 		Children: []core.Node{
-			core.Text{Content: "空格 播放/暂停 · ← → 逐帧 · Shift+← → ±1s · J 0.5× · L 1× · Shift+L 2×",
+			core.Text{Content: "空格 播放/暂停 · ← → 逐帧 · Shift+← → ±1s · J 0.5× · L 1× · Shift+L 2× · C 批注 · O 导出",
 				Style: core.Style{Color: core.RGBA(0xffffff, 0.55), FontSize: core.Points(18)}},
 			row,
 		},

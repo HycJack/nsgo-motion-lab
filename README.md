@@ -100,7 +100,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 | 包 | 是什么 |
 | --- | --- |
 | `filmkit` | 影片时钟（录制器注入 / 墙钟 / 媒体时钟）+ 时间数学：Seg / Win / Pulse / Spring（闭式解）/ Bezier / KF |
-| `film` | 引擎：Film 声明（Series 自动排布、嵌套 Seq 局部时间、FadeBlack/Cut 转场、字幕自动换行、SFX 沿触发）+ 审片模式（`?audit=1`：键盘逐帧 / 变速 / 带声音跳转）+ 时间轴总览（`?timeline=1`） |
+| `film` | 引擎：Film 声明（Series 自动排布、嵌套 Seq 局部时间、FadeBlack/Cut 转场、字幕自动换行、SFX 沿触发）+ 审片模式（`?audit=1`：键盘逐帧 / 变速 / 带声音跳转 / **C 落批注 · X 删标记 · O 导出 notes.json**）+ 时间轴总览（`?timeline=1`） |
 | `flowkit` | 流程图模块：解析 nsgo-flow 的 `.flow` 文本 → 分层布局（最长路定级/紧凑行距）→ 逐节点浮现、边沿折线生长、状态语义色 |
 | `mathkit` | manim 式数学动画：2D/3D 坐标系（穿原点 / 箭头 / 刻度）、Plot / Area / Tangent、LaTeX 公式（`tools/eq.py` 预生成路径，逐笔写 / 渐变 / 最优配对变形）、打光曲面、3D 虚线 |
 | `tpl` | 17 种风格视频模版（映射 html-ppt-designer STYLES.md）：TED / Keynote / … / Neo-Tokyo，配 Title / Bullets / KPI / Quote 等预制分镜 |
@@ -125,7 +125,7 @@ cd film-framework && go test ./...                     # 引擎与数学包的�
 cd ../examples/cylinder-demo
 go tool nsgo build -target web .                       # 构建
 python3 ../../film-framework/tools/serve.py "dist/Cylinder Unroll-0.1.0-web" 8099
-# 浏览器：/ 观看 · /?audit=1 审片（空格 / ← → / J L）· /?timeline=1 时间轴总览
+# 浏览器：/ 观看 · /?audit=1 审片（空格 / ← → / J L / C 批注 / O 导出）· /?timeline=1 时间轴总览
 node ../../film-framework/shots/film.js http://127.0.0.1:8099/ out 21 30   # WORKERS=4 并行录制
 ```
 

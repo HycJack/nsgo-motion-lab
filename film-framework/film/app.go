@@ -50,6 +50,7 @@ func root(f Film) func(*core.Scope) core.Node {
 		started := core.NewSignal(cx, false)               // 观众点过「开始」了吗
 		playing := core.NewSignal(cx, false)               // 审片模式：正在播吗
 		rate := core.NewSignal(cx, 1.0)                    // 审片变速：0.5 / 1 / 2
+		marks := core.NewSignalFunc(cx, loadMarks(), nil)  // 审片批注：时间戳清单
 		recording := recordingMode()                       // 录制器在驱动吗
 		audit := auditMode() && !recording                 // 审片模式（URL ?audit=1）
 		timeline := timelineMode() && !recording && !audit // 时间轴总览（?timeline=1）
@@ -253,7 +254,7 @@ func root(f Film) func(*core.Scope) core.Node {
 			children = append(children, core.Show{
 				When: barVisible.Get,
 				Then: func(cx *core.Scope) core.Node {
-					return auditBar(cx, f, filmT, playing, mediaRef, wake)
+					return auditBar(cx, f, filmT, playing, marks, mediaRef, wake)
 				},
 			})
 		}
@@ -308,6 +309,24 @@ func root(f Film) func(*core.Scope) core.Node {
 			cx.OnKey("shift+l", func() { setRate(2) })
 			cx.OnKey("j", func() { setRate(0.5) })
 			cx.OnKey("k", func() { playing.Set(false) })
+			// 批注：C 在当前时间落标记，X 删最近的，O 把清单复制到剪贴板
+			// （notes.json 雏形，交给外部的讲稿/剪辑流程）。
+			cx.OnKey("c", func() {
+				wake()
+				marks.Set(addMark(marks.Get(), filmT.Get()))
+				saveMarks(marks.Get())
+			})
+			cx.OnKey("x", func() {
+				if left, ok := dropNearest(marks.Get(), filmT.Get()); ok {
+					wake()
+					marks.Set(left)
+					saveMarks(left)
+				}
+			})
+			cx.OnKey("o", func() {
+				wake()
+				cx.SetClipboard(notesJSON(marks.Get(), f.Duration))
+			})
 		}
 
 		// 时间轴总览：全屏盖一层每幕一帧的卡片网格，
