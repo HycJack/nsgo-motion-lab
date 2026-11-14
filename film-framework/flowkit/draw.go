@@ -96,7 +96,10 @@ func drawCard(d *core.Drawing, nd *Node, pal Palette, alpha float64) {
 	}
 	lw := d.MeasureText(nd.Label, font)
 	d.SetFillColor(pal.Text)
-	d.FillText(nd.Label, x+w/2-lw/2, y+h/2+float32(size)*0.34, font)
+	// 显式设基线：引擎路由的 label() 把基线设成 Top 且状态泄漏，
+	// 不重设的话节点文字会挂到卡片下缘外。
+	d.SetTextBaseline(core.BaselineMiddle)
+	d.FillText(nd.Label, x+w/2-lw/2, y+h/2, font)
 
 	// 状态角标。
 	mark, mc := "", pal.Muted
@@ -122,6 +125,7 @@ func coreText(d *core.Drawing, s string, x, y, size float32, c core.Color, alpha
 	w := d.MeasureText(s, core.Font{Size: core.Points(size)})
 	d.SetFillColor(c)
 	d.SetAlpha(alpha)
+	d.SetTextBaseline(core.BaselineMiddle)
 	d.FillText(s, x-align*w, y, core.Font{Size: core.Points(size)})
 }
 
