@@ -1,6 +1,6 @@
 # nsgo-motion-lab
 
-一个 NSGo 工程，两半：**写 NSGo 应用的规矩**（`SKILL.md`，可装成 DSH 技能）和**把规矩跑一遍的现场**（`lab/`，13 个页签、234 张卡片）。
+一个 NSGo 工程，两半：**写 NSGo 应用的规矩**（`SKILL.md`，可装成 DSH 技能）和**把规矩跑一遍的现场**（`lab/`，14 个页签、237 张卡片），再加一套**把动效拍成片子**的框架（`film-framework/`）。
 
 规矩不是想出来的，是从 lab 里踩出来的。
 
@@ -13,6 +13,7 @@
 | `SKILL.md` | 技能本体：NSGo 的 API 铁律、动画与 3D 的写法、踩过的坑 |
 | `references/api.md` | 逐条 API 事实（信号、`View`/`Text`/`Button`、样式、布局、组件、服务、打包） |
 | `references/animation.md` | 动画：两套时钟、`AnimatedStyle`、曲线、弹簧、shader 驱动的动效 |
+| `references/keyframe.md` | 节点分镜：`Take`/`Node`/`Keyframes`/`Seek`/`Lint`，与 three.js 的对照，导出与自检 |
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
 | `film-framework/` | 拍片框架：分镜是影片时钟的纯函数，逐帧确定、可并行录制 |
@@ -63,7 +64,7 @@ go tool nsgo build -target windows_x64 .                # 打出 dist/
 
 ## 里面有什么
 
-13 个页签、234 张卡片：
+14 个页签、237 张卡片：
 
 | 页签 | 内容 |
 | --- | --- |
@@ -71,6 +72,7 @@ go tool nsgo build -target windows_x64 .                # 打出 dist/
 | Motion · Camera · UI Kit · Landing · Photo · Motion2 · Landing2 · Camera2 | [motion-prompt](https://github.com/showheyohtaki/motion-prompt) 目录的 8 个包 × 24 = 192 个动效，一个不落 |
 | 3D | 光线步进场景、CPU 投影立方体、CSS 3D 翻面，9 张 |
 | One take | 一镜到底：一条 `0→1` 通道跑完一个镜头，3 张 |
+| Studio | 节点分镜（`film-framework/keyframe`）：场景树 + 关键帧轨道，能自检、能定格、能录，3 张 |
 
 camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179 POV`、`180 Over-the-shoulder`）不满足于二维近似，直接跑在光线步进场景上——相机只是一组 uniform，平台按帧推进，零 commit：
 
@@ -104,10 +106,38 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 | `flowkit` | 流程图模块：解析 nsgo-flow 的 `.flow` 文本 → 分层布局（最长路定级/紧凑行距）→ 逐节点浮现、边沿折线生长、状态语义色 |
 | `mathkit` | manim 式数学动画：2D/3D 坐标系（穿原点 / 箭头 / 刻度）、Plot / Area / Tangent、LaTeX 公式（`tools/eq.py` 预生成路径，逐笔写 / 渐变 / 最优配对变形）、打光曲面、3D 虚线 |
 | `tpl` | 17 种风格视频模版（映射 html-ppt-designer STYLES.md）：TED / Keynote / … / Neo-Tokyo，配 Title / Bullets / KPI / Quote 等预制分镜 |
-| `shots/film.js` | 录制器：多 Chrome 并行分段、断点续录、缺帧检查 |
+| `keyframe` | 节点分镜：场景树 + 每通道一条关键帧轨道，编译成 `core.Node`——能播、能定格（`Seek`）、能自检（`Lint`/`Timeline`），由同一个影片时钟驱动 |
+| `shots/film.js` | 录制器：多 Chrome 并行分段、断点续录、缺帧检查；`CLIP=` 只录一块、`PRESS=` 先点进某个页签 |
 | `tools/` | serve.py（Range 静态服务）/ mux.py（视频 + 音轨 + SFX 合成）/ eq.py / frames.py / diff.py |
 
-三部例子成片（无声，1080p30）：
+**两种分镜，一个时钟。** `film` 的分镜是画布函数（`func(*core.Drawing, *Frame)`），画什么由参数算；`keyframe` 的分镜是一棵节点树，动什么由轨道说。两者都只认 `filmkit.Now()`，所以录制器不必知道里面是哪种——推进 `__filmT`，画面就到那一帧：
+
+```go
+take := keyframe.New("orbit", 8*time.Second)          // 一个镜头＝一个时钟
+take.Disc("moon").At(120, 60).Size(54, 54).Fill(core.RGB(0x2f5f86)).
+	On("x", keyframe.Keys(0, 120, 8, 300)).
+	On("scale", keyframe.Keys(0, 0.6, 3, 1.1, 8, 0.9))
+take.Text("cap", "3 SHOTS · 1 CLOCK").Font(17).At(40, 84).
+	On("opacity", keyframe.Win(2*time.Second, 7*time.Second, 400*time.Millisecond))
+
+keyframe.Tie(cx)          // 让这支 take 跟影片时钟走（录制器推 / 墙钟兜底）
+take.Frame(cx)            // 编译；播放时 0 commit/帧，定格时 1 commit/帧
+```
+
+没有屏幕也能审片——这是给 AI 写分镜用的：
+
+```sh
+$ go test ./keyframe        # 关键帧数学 + Lint 规则
+fmt.Println(take.Timeline()) # 每条轨道一行，48 列 ASCII 曲线，时间就是秒
+fmt.Println(take.Lint())     # 重名 / 通道写错 / 键超出镜头 / 死区间 …
+```
+
+两支节点分镜的成片（582×240 / 582×200，10 fps，`film-framework/shots/film.js` 录、放 `lab/docs/`）：
+
+- [`lab/docs/take-s1.mp4`](lab/docs/take-s1.mp4) —— 18 秒 8 条相机轨道的长镜（着色器场景，Studio 页签 S1）
+- [`lab/docs/story-s2.mp4`](lab/docs/story-s2.mp4) —— 12 秒三幕分镜：柱子上场 → 溶解到月亮 → 硬切落版（S2）
+
+八部例子成片（无声，1080p30）：
 
 - [`films/cylinder-unroll.mp4`](films/cylinder-unroll.mp4) —— 圆柱侧面展开教学片：无滑动滚动沿母线展开，C = 2πr、S = 2πrh（工程 `examples/cylinder-demo/`）
 - [`films/math-demo.mp4`](films/math-demo.mp4) —— 数学动画：导数几何意义、公式逐笔写与变形、打光鞍面 + 相机环绕（工程 `examples/math-demo/`）
@@ -136,8 +166,9 @@ node ../../film-framework/shots/film.js http://127.0.0.1:8099/ out 21 30   # WOR
 - 着色器在运行时编译，编译失败就是 panic，所以 `TestShadersCompile` 用 `core.CompileShader` 把每份源码过一遍。
 - 页签切换、UI kit 的组件状态、控件是否真的连到信号，各有测试（`TestTabsSwitchPages`、`TestUIKitControls`、`TestControlsAreLive`）。
 - 一镜到底的三张也进 `TestTabsSwitchPages`：切到 `One take` 要能摸到三张卡的标题和两个 Replay。
+- Studio 页签的三张由 `film-framework/keyframe` 驱动：`TestStudioTakes`（切页签、摸到三支 take、Replay 作用到时钟）与 `TestTakeSeekMatchesSample`（逐节点比对渲染值和纯数值，误差 0.01）守着「播放与定格不可能漂移」。
 - film-framework 与三个例子工程在本仓库路径下 `go vet` / `go test` / wasm 构建全过；成片以 WORKERS=4 并行录制，`tools/diff.py` 双录比对逐帧一致。
-- 「同一个镜头」是拍出来验过的，不是看着代码推的：`lab/shots/take.js` 用 CDP 在 0.5s/3s/6s/9s/12s/15s/17.9s 各截一帧，逐帧看构图有没有断（`lab/shots/` 已 gitignore）。
+- 「同一个镜头」是拍出来验过的，不是看着代码推的：`lab/docs/take-s1.mp4` 与 `lab/docs/story-s2.mp4` 由 `film-framework/shots/film.js` 逐帧推进 `__filmT` 录制（`READY`/`PRESS`/`CLIP`/`HIDE` 四个环境变量），抽帧看过 12.2s 的下三分之一、S2 的 1s/4s/7s/9.5s 三幕交接，没有空帧。
 
 ## 许可与致谢
 

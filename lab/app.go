@@ -10,6 +10,8 @@ import (
 	"github.com/oneo-me/nsgo"
 	"github.com/oneo-me/nsgo/base"
 	"github.com/oneo-me/nsgo/core"
+
+	"nsgofilm/keyframe"
 )
 
 // pageDef is one tab.
@@ -38,6 +40,9 @@ var pages = []pageDef{
 	// One continuous move, written as one lane: the take, its lane map, and
 	// the same construction without a shader.
 	{name: "One take", view: pageOneTake},
+	// The authoring layer: the one-take technique wrapped as a scene graph
+	// with keyframe tracks and a clock an exporter can set.
+	{name: "Studio", view: pageStudio},
 }
 
 func main() {
@@ -47,6 +52,10 @@ func main() {
 // Root is the app's first screen: a title bar with the three tabs, and
 // the page they choose.
 func Root(cx *core.Scope) core.Node {
+	// The Studio page's takes follow the film clock: on the web target that is
+	// window.__filmT when a recorder is driving, the wall clock otherwise. One
+	// call, and shots/film.js can render a take without any hook of its own.
+	keyframe.Tie(cx)
 	current := core.NewSignal(cx, 0)
 	return core.View{
 		// FlexShrink matters as much as FlexGrow here: without it the
@@ -103,7 +112,7 @@ func titleBar(cx *core.Scope, current *core.Signal[int]) core.Node {
 	}
 	header := []core.Node{
 		core.Text{Content: "NSGo Motion Lab", Style: core.Style{FontSize: 16, FontWeight: core.FontWeightBold, Color: colText}},
-		core.Text{Content: "canvas · animation · ui · shader · 192 motion examples · 3d · one take", Style: core.Style{FontSize: 12, Color: colFaint}},
+		core.Text{Content: "canvas · animation · ui · shader · 192 motion examples · 3d · one take · studio", Style: core.Style{FontSize: 12, Color: colFaint}},
 	}
 	// The tabs wrap under the title on a narrow window, so they stay
 	// reachable there.

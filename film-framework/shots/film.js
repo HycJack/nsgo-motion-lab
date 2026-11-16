@@ -18,6 +18,12 @@
 //   ENCODE=0        keep frames only, skip ffmpeg
 //   FPS=60          frames per second (default 30; positional [fps] wins)
 //   WORKERS=4       parallel chrome processes (default: min(4, cpus))
+//   READY=selector  wait for this before recording (default: canvas)
+//   PRESS=text      click the element with that exact text first (a tab)
+//   CLIP=selector   record only that element's rect (a card, a stage) instead
+//                   of the viewport; HIDE=sel,sel hides page furniture first.
+//                   A 节点分镜 (keyframe) is detected by its [data-testid^=take-]
+//                   nodes and gets one more frame plus SETTLE ms (default 60).
 //
 // Frames land in <outDir>/frames/f00000.jpg… and the mp4 in
 // <outDir>/film.mp4.
@@ -153,16 +159,69 @@ async function worker(k, chunk) {
     await send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__filmT = 0;" });
     await send("Page.navigate", { url });
 
+    // 应用起来了没有：默认等 canvas（画布分镜），READY 可以换成任何选择器
+    // ——节点分镜没有 canvas，等它自己的页签或舞台更实在。
+    const readySel = process.env.READY || "canvas";
     let up = false;
     for (let i = 0; i < 120; i++) {
-      if (await evaluate(`!!document.querySelector('canvas')`)) { up = true; break; }
+      if (await evaluate(`!!document.querySelector(${JSON.stringify(readySel)})`)) { up = true; break; }
       await sleep(500);
     }
-    if (!up) throw new Error(`worker ${k}: canvas never appeared — is the app running?`);
+    if (!up) throw new Error(`worker ${k}: ${readySel} never appeared — is the app running?`);
     await sleep(1500);
 
     const raf2 = () =>
       evaluate(`new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))`, true);
+    const rafN = (n) =>
+      evaluate(
+        `new Promise(r => { let i = 0; const f = () => (++i >= ${n} ? r(1) : requestAnimationFrame(f)); requestAnimationFrame(f); })`,
+        true,
+      );
+
+    // PRESS=文本：录整个页面里的某一块（一个页签、一个按钮）之前先点进去。
+    // 点完等页面稳定，再开始推时钟。
+    if (process.env.PRESS) {
+      const v = await evaluate(`(() => {
+        const T = ${JSON.stringify(process.env.PRESS)};
+        const el = [...document.querySelectorAll('*')].filter(e => e.textContent && e.textContent.trim() === T).pop();
+        if (!el) return "none";
+        const b = el.getBoundingClientRect();
+        return JSON.stringify({ x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) });
+      })()`);
+      if (!v || v === "none") throw new Error(`worker ${k}: PRESS target not found: ${process.env.PRESS}`);
+      const p = JSON.parse(v);
+      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: p.x, y: p.y, buttons: 0 });
+      await send("Input.dispatchMouseEvent", { type: "mousePressed", x: p.x, y: p.y, button: "left", buttons: 1, clickCount: 1 });
+      await sleep(60);
+      await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: p.x, y: p.y, button: "left", buttons: 0, clickCount: 1 });
+      await sleep(2000);
+    }
+
+    // A 节点分镜（keyframe）多要一帧：seek 先落进时钟，平台的帧时钟再把
+    // 动画值写进视图树。画布分镜在 Draw 里读时钟，两帧就够。
+    const nodeTakes = await evaluate(`!!document.querySelector('[data-testid^="take-"]')`);
+    const rafFrames = nodeTakes ? 3 : 2;
+    const settleMS = Number(process.env.SETTLE || (nodeTakes ? 60 : 0));
+    if (nodeTakes) console.log(`worker ${k}: node takes present — ${rafFrames} rAF + ${settleMS}ms per frame`);
+
+    // HIDE=sel,sel 把页面家具藏掉（页签栏、重播按钮），CLIP=sel 只录那个元素：
+    // 录一支 take，不是录一个网页。
+    for (const sel of (process.env.HIDE || "").split(",").filter(Boolean)) {
+      await evaluate(`(() => { for (const el of document.querySelectorAll(${JSON.stringify(sel)})) el.style.display = "none"; return true; })()`);
+    }
+    let clip = null;
+    if (process.env.CLIP) {
+      const v = await evaluate(`(() => {
+        const el = document.querySelector(${JSON.stringify(process.env.CLIP)});
+        if (!el) return "none";
+        el.scrollIntoView({ block: "center" });
+        const b = el.getBoundingClientRect();
+        return JSON.stringify({ x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height), scale: 1 });
+      })()`);
+      if (!v || v === "none") throw new Error(`worker ${k}: CLIP selector matched nothing: ${process.env.CLIP}`);
+      clip = JSON.parse(v);
+      console.log(`worker ${k}: clip ${clip.width}x${clip.height} at ${clip.x},${clip.y}`);
+    }
 
     const t0 = Date.now();
     let done = 0, skipped = 0;
@@ -171,9 +230,12 @@ async function worker(k, chunk) {
       // 续录：已有的帧直接跳过。
       if (existsSync(file) && statSync(file).size > 0) { skipped++; continue; }
       await evaluate(`window.__filmT = ${i / fps}`);
-      await raf2();
-      const { data } = await send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
-      writeFileSync(file, Buffer.from(data, "base64"));
+      await rafN(rafFrames);
+      if (settleMS > 0) await sleep(settleMS);
+      const shot = clip
+        ? await send("Page.captureScreenshot", { format: "jpeg", quality: 93, clip })
+        : await send("Page.captureScreenshot", { format: "jpeg", quality: 93 });
+      writeFileSync(file, Buffer.from(shot.data, "base64"));
       done++;
       const idx = i - chunk.from;
       if (idx % 60 === 0) console.log(`worker ${k}: ${idx}/${chunk.to - chunk.from} (${Math.round((Date.now() - t0) / 1000)}s)`);

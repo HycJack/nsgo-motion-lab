@@ -141,6 +141,7 @@ Two clocks. **Commit** = Go re-renders a span (signals, `Show`/`Each`/`Dynamic`)
 | Standard entrance/exit/attention/loop | `core.Motion` + a `core.MotionPreset` (38 of them, all honour reduce-motion) |
 | Custom choreography, overlap, holds, swaps | `AnimatedStyle` + `AnimatedNode` graph (`Timing`, `Spring`, `Interpolate`, `Sequence`, `Stagger`, `Loop`) |
 | One long take: many beats on one clock, no cuts | one **linear** `0→1` lane + a window (`Interpolate`) per channel — recipe 7 in `references/animation.md` |
+| A *shot* as data: scene graph + keyframe tracks per channel, seekable, exportable | `film-framework/keyframe` — `keyframe.New/Keys/Win/Seek/Lint/Timeline`, clock from `filmkit.Now()`; see `references/keyframe.md` |
 | Per-pixel / infinite field / 3D | `core.Shader` uniforms as nodes — zero commits |
 | Procedural drawing | `core.Canvas` `Draw` (re-records per change) or `d.Bind` (the platform replays it, no re-record) |
 
@@ -155,6 +156,8 @@ Five rules worth more than the API: **(1)** never read a signal or animated valu
 For anything longer than one beat, the whole take is a single **linear** `0→1` value and every channel is a window on it. Hide by `Opacity 0`, never by unmounting: a re-mounted node restarts from zero, and that discontinuity is exactly a cut. Ease inside each window, not on the master lane — an eased master drifts every window boundary.
 
 Read `references/animation.md` before writing any animation: preset table, easing/duration numbers that worked, choreography recipes, shader-and-canvas motion, 3D (ray marching), testing, and a symptom→cause table for motion bugs.
+
+When the thing being animated is a *shot* rather than one effect — layers, captions, a camera, several beats that must be seekable and recordable — write it as a `keyframe.Take` instead of hand-wiring nodes: `Take` + one track per channel (seconds, not 0→1), `Seek` for stills, `Lint`/`Timeline` to read it without a screen, and the film recorder (`film-framework/shots/film.js`) to make it a video. Three traps live there: a take must outlive a commit, a seek needs a commit to reach the view tree, and starting an animation *inside* a build re-enters the engine's loop (wasm OOMs). See `references/keyframe.md`.
 
 ## Dev loop, build, test
 
@@ -229,4 +232,5 @@ TSX apps are the same shape: `App.tsx` imports `mount, signal, Text, View` from 
 | The `nsgo` tool, packaging, signing | `docs/architecture/tool.md` |
 | Testing and selectors | `docs/architecture/testing.md` |
 | Animation, motion presets, keyframes, shader and canvas motion, 3D | `references/animation.md` (this skill); `core/motion.go`, `core/animated.go`, `core/canvas.go` |
+| Shots as data, seeking, frame export, film recorder | `references/keyframe.md` (this skill); `film-framework/keyframe/`, `film-framework/shots/film.js` |
 | What is missing | `docs/roadmap.md` |

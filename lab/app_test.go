@@ -6,6 +6,8 @@ import (
 
 	"github.com/oneo-me/nsgo/core"
 	"github.com/oneo-me/nsgo/nsgotest"
+
+	"nsgofilm/keyframe"
 )
 
 // TestMain gives the platform the main thread under nsgo test -target.
@@ -70,6 +72,36 @@ func TestTabsSwitchPages(t *testing.T) {
 
 	app.Press("id:tab-Canvas")
 	app.Find("id:canvas-bars")
+}
+
+// TestStudioTakes walks the authoring layer's page: three takes, each building
+// from tracks, and each replayable from its own clock.
+func TestStudioTakes(t *testing.T) {
+	app := nsgotest.Start(t, Root, nsgotest.Size(1180, 860))
+	app.Press("id:tab-Studio")
+
+	app.Find(`text:"S1 · Take"`)
+	app.Find(`text:"S2 · Storyboard"`)
+	app.Find(`text:"S3 · Script check"`)
+
+	// Every card's stage is its take's root, addressed by name.
+	app.Find("id:take-shoot-cam")
+	app.Find("id:take-story-wide")
+	app.Find("id:take-check-script")
+
+	app.Press("id:chip-Replay S1")
+	app.Press("id:chip-Replay S2")
+	app.Press("id:chip-Replay S3")
+
+	// The takes are live: seeking one moves the frame it renders.
+	shoot := keyframe.TakeNamed("shoot")
+	if shoot == nil {
+		t.Fatal("the camera take did not register")
+	}
+	shoot.Seek(9 * time.Second)
+	app.Settle()
+	app.Advance(20 * time.Millisecond)
+	app.Find("id:take-shoot-cam")
 }
 
 // TestUIKitControls drives the ui kit page: every control it offers has

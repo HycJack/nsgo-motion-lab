@@ -34,7 +34,7 @@ go tool nsgo build -target all -output dist
 
 | 文件 | 内容 |
 | --- | --- |
-| `app.go` | 13 个页签 + `core.Shader`／`core.Scroll` 骨架，`nsgo.Run(Root, nsgo.WindowSize(1180, 860))` |
+| `app.go` | 14 个页签 + `core.Shader`／`core.Scroll` 骨架，`nsgo.Run(Root, nsgo.WindowSize(1180, 860))` |
 | `theme.go` | 调色板、以及 `card` / `grid` / `chip` / `well` / `row` / `bezier` 等 60 行的小积木 |
 | `page_canvas.go` | 6 个画布示例 |
 | `page_animation.go` | 4 个动画示例 + 16 个 `core.MotionPreset` 网格 |
@@ -48,6 +48,8 @@ go tool nsgo build -target all -output dist
 | `page_shader.go` | 4 个 Kage 着色器示例 |
 | `shader3d.go` · `page_3d.go` | 光线步进场景（相机＝uniform）＋ CPU 投影立方体 ＋ CSS 3D 翻面，9 张 |
 | `page_one_take.go` | 一镜到底的 3 张：18s 的相机长镜、它的时间表、12s 的 2D 视差落版 |
+| `page_studio.go` · `takes.go` | Studio 页签的 3 张：`keyframe` 写的 18s 相机长镜、12s 三幕分镜、时间表与 Lint 自画像；takes 用 `sync.Once` 长寿 |
+| `studio_live_test.go` | 定格与纯数值对齐：逐节点比对渲染值 vs `Sample`（误差 0.01），并守住节点不重建 |
 | `app_test.go` | 无头测试：着色器编译 + 页签切换 + 控件交互 + 8 个动效包的首尾卡片 |
 
 ## 画布：`core.Canvas`
@@ -287,3 +289,39 @@ Kage 就是 Go 语法的 GLSL 分片着色器：入口 `Fragment(dst vec4, pos v
 `showreel/` 现在的样片是**圆柱的侧面展开**（与 `../examples/cylinder-demo/` 同源）：20.5 秒、三幕、连续相机——环绕亮相标 r/h → 滑翔到侧视看无滑动滚动沿母线展开 → 升高俯视量 C/h 尺寸线并落版公式 S = 2πrh。1920×1080@30fps 一帧不缺，成品 `dist/film.mp4`（gitignore，用上面的命令重录），`../films/cylinder-unroll.mp4` 是同一部片子的归档。
 
 > 在 DSH/受限沙箱里，无头 Chrome 会因子进程崩溃（SIGTRAP）活不过十几秒，`film.js` 在这类宿主机上跑不完——这是沙箱的问题，不是脚本的问题；在普通机器上直接用即可，沙箱内可改由宿主自带的浏览器驱动逐帧截屏后再 ffmpeg。
+
+## Studio 页签：节点分镜 `keyframe`
+
+前 13 个页签动的是「一段动效」，`Studio` 动的是**镜头**：`film-framework/keyframe` 把一棵场景树 + 每通道一条关键帧轨道编译成普通的 `core.Node`。三张卡（`page_studio.go`）各演一件事：
+
+| 卡片 | 演什么 |
+| --- | --- |
+| **S1 · Take** | 18 秒、8 条相机轨道的一镜到底（着色器场景当舞台），中途换三次字幕。和 `One take` 页签同一个镜头，但这次是**写成轨道**的 |
+| **S2 · Storyboard** | 12 秒三幕：柱状城市上场的溶解（3.8→4.2s）→ 月亮与轨道上台 → 7.98→8.0s 的 **20 毫秒硬切**落到标题。没有挂载/卸载，只有窗口重叠 |
+| **S3 · Script check** | 同一支分镜的 `Timeline()`（每条轨道 48 列 ASCII 曲线）与 `Lint()`（八类真错），给「看不见画面」的人看 |
+
+```go
+take := keyframe.New("story", 12*time.Second)     // 一支 take＝一个时钟
+take.Group("wide").On("opacity", keyframe.Keys(0, 1, 3.8, 1, 4.2, 0).Ease(keyframe.EaseInOut))
+take.Disc("moon").At(120, 60).Size(54, 54).
+	On("scale", keyframe.KeysAt(3700*ms, 0.6, 5200*ms, 1.1, 7*time.Second, 0.9))
+keyframe.Tie(cx)                                  // 跟影片时钟
+take.Frame(cx)                                    // 编译：播放 0 commit/帧，定格 1 commit/帧
+```
+
+四个坑，前三个是这一层自己踩出来的：
+
+1. **镜头要长寿**。`keyframe.New` 放在页面函数里＝每次 commit 重建时钟，外部定格永远追不上；`takes.go` 用 `sync.Once` 建一次，页面每次只 `take.Frame(cx)`。
+2. **定格必须有一次 commit**。`Frame` 把树包在 `core.Dynamic` 里读一个 version 信号，`Seek` 顺手 +1——不然值节点变了、视图树还是上一帧。
+3. **别在 build 里 seek**。`Seek` 会 `StartAnimation`，在树正在构建时启动一个动画会重入引擎的帧循环，wasm 直接 OOM（4 GB）。挂载时的「落到第 0 帧」推迟到 `cx.RequestAnimationFrame` 里做。
+4. **组不合成透明度**。父容器 `Opacity` 在 web 上不乘到子节点，所以组的淡出用 `core.Mul` 扇出到每个孩子。
+
+成片：`docs/take-s1.mp4`（18 秒）与 `docs/story-s2.mp4`（12 秒），都用 `../film-framework/shots/film.js` 录的——不需要第二套钩子，推 `__filmT` 就够了：
+
+```sh
+cd ../film-framework
+READY='[data-testid="tab-Studio"]' PRESS=Studio HIDE='[data-testid^="chip-"]' \
+CLIP='[data-testid="stage-S1"]' SIZE=1280x900 WORKERS=2 \
+node shots/film.js http://127.0.0.1:8099/ ../lab/shots/rec/take-s1 18 10
+# → ../lab/shots/rec/take-s1/film.mp4（583x240、180 帧、10 fps），拷到 ../lab/docs/
+```

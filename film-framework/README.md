@@ -9,11 +9,19 @@
 ```
 filmkit/     影片时钟 + 时间数学（Seg / EaseOut / Win / Pulse …）
 film/        引擎：Film 配置 → 时钟循环、交叉溶解、音频载体、字幕、开始按钮
+keyframe/    节点分镜：场景树 + 关键帧轨道 → core.Node，能播、能定格、能自检
 shots/film.js  录制器：推时钟 → CDP 逐帧截图 → ffmpeg 编码（WORKERS 并行、断点续录）
 tools/         serve.py（Range 静态服务）/ frames.py（抓帧）/ eq.py（LaTeX→路径）/ mux.py（混音合成）/ diff.py（确定性回归）
-../examples/   三个例子工程：math-demo（数学动画）/ cylinder-demo（圆柱展开教学片）/ style-demo（风格画廊）
-../films/      三个例子录好的成片 mp4
+../examples/   例子工程：math-demo（数学动画）/ cylinder-demo（圆柱展开教学片）/ style-demo（风格画廊）…
+../films/      例子录好的成片 mp4
 ```
+
+两种分镜共用同一个时钟（`filmkit.Now()`），所以录制器不必知道画面是怎么来的：
+
+| | 分镜是什么 | 适合 |
+| --- | --- | --- |
+| `film.Shot` | `func(*core.Drawing, *Frame)`——一笔一笔画 | 教学片、图解、公式、几何动画 |
+| `keyframe.Take` | 一棵节点树 + 每通道一条轨道——动的是 `AnimatedStyle` | 文字/卡片/图表/图层/shader 场景，要逐帧确定、要能定格截图 |
 
 ## 一部片子的最小写法
 
@@ -215,6 +223,52 @@ film.Run(film.Film{
 预设：TED / Keynote / TypicalPPT / Gamma / Consulting / Editorial /
 Swiss / Newspaper / Bauhaus / Kinfolk / Muji / Brutalist / NeoTokyo /
 DarkMode / RedBlackTech / Cartoon / Education。风格画廊演示：`../examples/style-demo/`（成片 `../films/style-demo.mp4`）。
+
+## 节点分镜（keyframe）
+
+`film.Shot` 是「一笔一笔画」，`keyframe.Take` 是「一棵节点树 + 每通道一条轨道」。三种能力是它值得单独存在的原因：**能定格**（同一棵树播放和录像是同一个画面）、**能自检**（看不见屏幕也能审）、**能读**（时间表是文本）。
+
+```go
+take := keyframe.New("orbit", 8*time.Second)        // 一支 take = 一个时钟
+
+take.Disc("moon").At(120, 60).Size(54, 54).Fill(core.RGB(0x2f5f86)).
+	On("x", keyframe.Keys(0, 120, 8, 300)).          // 秒，不是 0..1
+	On("scale", keyframe.Keys(0, 0.6, 3, 1.1, 8, 0.9))
+take.Text("cap", "3 SHOTS · 1 CLOCK").Font(17).At(40, 84).
+	On("opacity", keyframe.Win(2*time.Second, 7*time.Second, 400*time.Millisecond))
+
+keyframe.Tie(cx)          // 跟影片时钟：录制器推 __filmT，没人推就用墙钟
+take.Frame(cx)            // 编译；播放 0 commit/帧，定格 1 commit/帧
+```
+
+节点类型与可控通道（写错不是静默失败，`Lint` 会指出来）：
+
+| Kind | 画什么 | 通道 |
+| --- | --- | --- |
+| `Group` | 不画东西，分组＋统一淡出 | `x` `y` `opacity` |
+| `Box` `Disc` `Text` | 矩形 / 圆盘 / 文字（自带底板、内距） | `x` `y` `scale` `scaleX` `scaleY` `rotate` `opacity` |
+| `Camera` | 一个 `core.Shader` 场景，相机是 uniform | `eye.x/y/z` `look.x/y/z` `fov` `tint` |
+| `Canvas` | 自己的 `Draw` 回调 | — |
+
+```go
+keyframe.Keys(0, 24, 3, 200)               // 关键帧：秒 → 值
+keyframe.KeysAt(8300*ms, 24, 15100*ms, 60)  // 或者直接给 time.Duration
+keyframe.Win(500*ms, 5*time.Second, 400*ms) // 窗口：0→1（带 ramp）→保持→0
+keyframe.Keys(...).Ease(keyframe.EaseInOut) // 一条轨道一个缓动
+```
+
+**没有屏幕也能审。** `Lint()` 报八类真错：节点重名、`Track` 指向不存在的节点、通道写错（`eye.z` 写到 `Box` 上）、同一通道两条轨道、关键帧超出镜头、关键帧不递增、`opacity` 越界、某条轨道 >¼ 时长完全不动（死区间）。`Timeline()` 把每条轨道画成 48 列 ASCII 曲线，`Dump()` 再加节点清单；`Sample(t)` 是纯数值求值，用来写断言而不是比截图。
+
+**录制走同一个录制器**：推 `__filmT` 就够，不需要第二套钩子。页面家具用 `HIDE` 藏、只录一块用 `CLIP`、先点进页签用 `PRESS`：
+
+```sh
+cd film-framework
+READY='[data-testid="tab-Studio"]' PRESS=Studio HIDE='[data-testid^="chip-"]' \
+CLIP='[data-testid="stage-S1"]' SIZE=1280x900 WORKERS=3 \
+node shots/film.js http://127.0.0.1:8099/ ../lab/shots/rec/take-s1 18 10
+```
+
+录制器一看到 `[data-testid^="take-"]` 就多等一帧、再等 `SETTLE` ms（默认 60）：seek 先落进时钟，平台帧时钟才把动画值写进视图树。演示见 `../lab/page_studio.go`（三张卡：18s 相机长镜、12s 三幕分镜、时间表与 Lint 的自画像），成片 `../lab/docs/take-s1.mp4`、`../lab/docs/story-s2.mp4`。
 
 ## 拍一部新片
 
