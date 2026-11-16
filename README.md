@@ -17,8 +17,8 @@
 | `lab/` | 可运行的 Go 应用 Motion Lab，把上面每条规矩实现一遍 |
 | `lab/README.md` | 逐页签的技术说明（写卡片时踩的坑都在这里） |
 | `film-framework/` | 拍片框架：分镜是影片时钟的纯函数，逐帧确定、可并行录制 |
-| `examples/` | 九个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo / effects-demo / flow-demo / cone-volume-demo / chem-demo / take-demo（层与窗口） |
-| `films/` | 九个例子录好的成片 mp4 |
+| `examples/` | 十个例子片工程：math-demo / cylinder-demo / style-demo / sort-demo / effects-demo / flow-demo / cone-volume-demo / chem-demo / take-demo（层与窗口）/ portrait-demo（竖屏、全片层） |
+| `films/` | 十个例子录好的成片 mp4 |
 
 仓库根目录本身就是一个合法的技能目录（`SKILL.md` + `references/`），所以「装技能」＝让 DSH 指向这个 checkout，不需要额外的打包步骤。
 
@@ -150,9 +150,10 @@ fmt.Println(take.Lint())     # 重名 / 通道写错 / 键超出镜头 / 死区�
 - [`lab/docs/take-s1.mp4`](lab/docs/take-s1.mp4) —— 18 秒 8 条相机轨道的长镜（着色器场景，Studio 页签 S1）
 - [`lab/docs/story-s2.mp4`](lab/docs/story-s2.mp4) —— 12 秒三幕分镜：柱子上场 → 溶解到月亮 → 硬切落版（S2）
 
-九部例子成片（无声，1080p30）：
+十部例子成片（无声，1080p30）：
 
 - [`films/take-demo.mp4`](films/take-demo.mp4) —— 层与窗口：一层 canvas 底图 + 三层节点字卡 + 三条字幕，21 秒，`Layers` 挂载/摘除与 `Take.Delay` 对齐（工程 `examples/take-demo/`，动图 `lab/docs/take-demo.gif`）
+- [`films/portrait-demo.mp4`](films/portrait-demo.mp4) —— 竖屏 1080×1920（横向 16:9 之外的设计画幅）：一条铺满全片的进度轨（`Over(t, 0, 0)`）+ 三张按窗口换的字卡，画布自己还交叉溶解一次（工程 `examples/portrait-demo/`，动图 `lab/docs/portrait-demo.gif`）
 - [`films/cylinder-unroll.mp4`](films/cylinder-unroll.mp4) —— 圆柱侧面展开教学片：无滑动滚动沿母线展开，C = 2πr、S = 2πrh（工程 `examples/cylinder-demo/`）
 - [`films/math-demo.mp4`](films/math-demo.mp4) —— 数学动画：导数几何意义、公式逐笔写与变形、打光鞍面 + 相机环绕（工程 `examples/math-demo/`）
 - [`films/style-demo.mp4`](films/style-demo.mp4) —— 风格画廊：六幕六风格的 PPT 式视频模版（工程 `examples/style-demo/`）
@@ -181,7 +182,7 @@ node ../../film-framework/shots/film.js http://127.0.0.1:8099/ out 21 30   # WOR
 - 页签切换、UI kit 的组件状态、控件是否真的连到信号，各有测试（`TestTabsSwitchPages`、`TestUIKitControls`、`TestControlsAreLive`）。
 - 一镜到底的三张也进 `TestTabsSwitchPages`：切到 `One take` 要能摸到三张卡的标题和两个 Replay。
 - Studio 页签的三张由 `film-framework/keyframe` 驱动：`TestStudioTakes`（切页签、摸到三支 take、Replay 作用到时钟）、`TestTakeSeekMatchesSample`（逐节点比对渲染值和纯数值，误差 0.01）与 `TestTakeNodeIsStable`（页签来回一趟，定格还在原处）守着「播放与定格不可能漂移」。
-- film-framework 与九个例子工程在本仓库路径下 `go vet` / `go test` / wasm 构建全过；成片以 WORKERS=4 并行录制，`tools/diff.py` 双录比对逐帧一致。
+- film-framework 与十个例子工程在本仓库路径下 `go vet` / `go test` / wasm 构建全过；成片以 WORKERS=4 并行录制，`tools/diff.py` 双录比对逐帧一致。
 - 「同一个镜头」是拍出来验过的，不是看着代码推的：`lab/docs/take-s1.mp4` 与 `lab/docs/story-s2.mp4` 由 `film-framework/shots/film.js` 逐帧推进 `__filmT` 录制（`READY`/`PRESS`/`CLIP`/`HIDE` 四个环境变量），抽帧看过 12.2s 的下三分之一、S2 的 1s/4s/7.9s/8.0s 三幕交接，没有空帧（7.9s 是第二幕、8.0s 是第三幕，中间没有一帧黑）。
 
 ## 许可与致谢

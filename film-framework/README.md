@@ -12,7 +12,7 @@ film/        引擎：Film 配置 → 时钟循环、交叉溶解、音频载体
 keyframe/    节点分镜：场景树 + 关键帧轨道 → core.Node，能播、能定格、能自检
 shots/film.js  录制器：推时钟 → CDP 逐帧截图 → ffmpeg 编码（WORKERS 并行、断点续录）
 tools/         serve.py（Range 静态服务）/ frames.py（抓帧）/ eq.py（LaTeX→路径）/ mux.py（混音合成）/ diff.py（确定性回归）
-../examples/   例子工程：math-demo（数学动画）/ cylinder-demo（圆柱展开教学片）/ style-demo（风格画廊）/ take-demo（层与窗口）…
+../examples/   例子工程：math-demo（数学动画）/ cylinder-demo（圆柱展开教学片）/ style-demo（风格画廊）/ take-demo（层与窗口）/ portrait-demo（竖屏）…
 ../films/      例子录好的成片 mp4
 ```
 
@@ -302,8 +302,10 @@ film.Run(film.Film{
 - **别用 `core.Dynamic` 包窗口判断**：`Dynamic` 每帧重建，take 会每帧重新
   `bind` 一次（每帧造一个 Holder）。用 `core.Show`——它的 `When` 只在真假翻转
   时才换分支，播放期间零提交。`Over` 已经这么做了。
-- 例：`../examples/take-demo/`（21 秒：一层 canvas 底图 + 三层字卡 + 三条字幕），
-  成片 `../films/take-demo.mp4`，动图 `../lab/docs/take-demo.gif`。
+- 例：`../examples/take-demo/`（21 秒 16:9：一层 canvas 底图 + 三层字卡 + 三条字幕），
+  成片 `../films/take-demo.mp4`，动图 `../lab/docs/take-demo.gif`；
+  `../examples/portrait-demo/`（10 秒竖屏 1080×1920：一条 `Over(rail, 0, 0)` 铺满全片的层
+  + 三张按窗口换的字卡，画布自己交叉溶解一次），成片 `../films/portrait-demo.mp4`。
 
 ## 拍一部新片
 

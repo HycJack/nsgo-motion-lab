@@ -113,6 +113,8 @@ film.Run(film.Film{
 
 窗口、`Delay`、缩放都在 `film/layer.go`；测试 `TestLayerFollowsTheFilmClock` 用一次真实的 0.2 秒等待证明它跟的是播放头（把 `Tie` 注释掉，它会停在 x=20，而轨道要求 36）。
 
+两个例子：`examples/take-demo/`（16:9，21 秒，三张字卡按窗口换）、`examples/portrait-demo/`（竖屏 1080×1920，10 秒，一条 `Over(rail, 0, 0)` 铺满全片的进度轨 + 三张字卡）。竖屏那个顺带证明设计画幅与窗口尺寸无关：同一份分镜先按 720×1280 的窗口录过一遍，等比缩放之后一个字都没挪。
+
 ## 通道
 
 `On` 的通道名按节点类型限定；写错不是静默失败，`Lint` 会指出来。
