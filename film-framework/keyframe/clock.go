@@ -18,9 +18,11 @@ import (
 // the same frame. Nothing in a take reads the wall clock, so a frame is a
 // function of the clock and the recording stays reproducible.
 //
-// Without a recorder there is no external clock. The takes then keep playing on
-// their own (Play), which is what the live page wants; Tie only overrides that
-// while something outside is driving time.
+// The same call makes a take follow the film it is mounted in: a film publishes
+// its own playhead with filmkit.Drive, filmkit.Now then answers from it, and
+// Driven turns true — so pausing, scrubbing and stepping the film reach the take
+// with no second hook. Without any driver there is no external clock, the takes
+// keep playing on their own (Play), which is what the live page wants.
 func Tie(cx *core.Scope) {
 	tieMu.Lock()
 	// cx is the app's own scope here (the one Root is called with), which is
@@ -49,7 +51,7 @@ func Tie(cx *core.Scope) {
 		}
 		now := filmkit.Now()
 		switch {
-		case !Recording():
+		case !filmkit.Driven():
 			// Nobody is driving: the take owns its clock.
 			last = -1
 		case now != last:

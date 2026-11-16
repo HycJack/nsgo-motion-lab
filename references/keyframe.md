@@ -20,7 +20,7 @@ take.Text("slate", "ONE TAKE").Font(20).Bold().Color(colText).
 	Pad(7, 15).At(20, 18).Fill(core.RGBA(0x0b1119, 0.72)).
 	On("opacity", keyframe.Win(500*ms, 5*time.Second, 400*ms))
 
-keyframe.Tie(cx)                                      // 跟影片时钟（录制器推 / 墙钟兜底）
+keyframe.Tie(cx)                                      // 跟时钟走：__filmT / 所在影片的播放头 / 墙钟
 take.Frame(cx)                                        // 编译成 core.Node
 ```
 
@@ -41,7 +41,7 @@ take shoot · 18.0s · 3 tracks
 | --- | --- | --- |
 | 唯一活动值 | `core.Timing(p, 1, {Duration: 18s, Easing: Linear})` | `p.Set(t/18)` |
 | 每帧成本 | **0 次 commit**（平台按帧推进） | 1 次 commit（重建这棵子树） |
-| 谁在驱动 | 平台帧时钟 | `filmkit.Now()`：录制器的 `__filmT` 或墙钟 |
+| 谁在驱动 | 平台帧时钟 | `filmkit.Now()`：录制器的 `__filmT` > 所在影片发布的时钟 > 墙钟 |
 
 关键性质：**同一棵树既播放又定格，所以两者不可能漂移**。`Seek(t)` 之后截到的帧，就是播到 `t` 时的那一帧；这条由 `TestTakeSeekMatchesSample` 守着（逐节点对比 `Animated.TranslateX/ScaleX/Opacity` 与 `Sample`，误差 0.01）。
 
@@ -56,11 +56,30 @@ take shoot · 18.0s · 3 tracks
 | `mixer.setTime(t)` | `take.Seek(t)` / 录制器推 `__filmT` | `Seek` 会**停住**播放 |
 | `mixer.update(dt)` | `play()` → `core.Timing` | 平台推进，不 re-render |
 | `renderer.setAnimationLoop` | 平台帧时钟 | Go 侧零 work |
+| 放进一支影片的时间轴 | 挂进 `film.Film` 后一帧就是「seek 到影片时间」，见下一节 | — |
 | — | `take.Lint()` | 看不见画面时的自检 |
 | — | `take.Sample(t)` / `take.At(path, t)` | 纯数值，用来写断言 |
 | — | `take.Timeline()` / `take.Dump()` | 把镜头读成文本 |
 
 three.js 没有后三项，因为写 three.js 的人**看着屏幕调**。AI 写代码时看不到屏幕，所以自检和可读输出是必需品，不是装饰。
+
+## 一个时钟，三种驱动
+
+`filmkit.Now()` 是唯一读数入口，按权威顺序取三个来源：
+
+| 顺序 | 来源 | 谁设置 | 用在哪 |
+| --- | --- | --- | --- |
+| 1 | 录制器的 `window.__filmT` | `shots/film.js` 在页面脚本之前注入 | 逐帧录制：帧率无关、可重跑复现 |
+| 2 | 影片发布的播放头 | `film.Run` 挂载时 `filmkit.Drive(func() float64 { return filmT.Get() })`，卸载时 `cx.Cleanup` 停掉 | 片中的节点分镜跟着影片时间：暂停、拖进度、变速、`?audit=1` 逐帧全都对它生效 |
+| 3 | 墙钟 | `filmkit.Wall()` | 页面里没人驱动时（lab 的页签就是这样） |
+
+三条规矩：
+
+- **`Take` 只读 `filmkit.Now()`，不读平台时钟。** 所以「第 7.98 秒那一帧」在录、在播、在审片三种情况下是同一个值。
+- **推进时间的代码只读 `filmkit.Wall()`。** 影片自己的帧循环用它推进 `t`；在那里读 `Now()` 会读到上一帧发布出去的值，无声片就永远停在原地——这是 `film` 里唯一必须区分两者的地方。
+- **`filmkit.Driven()` 判「有没有人在驱动」。** `Tie` 和 `start` 都看它：有驱动就 seek 过去（不自己播），没有才 `Play`。录制器和影片发布的时钟在这里是同一种东西，所以 `Tie` 不必知道谁在驱动。
+
+发布是「最新的一次生效」：后挂载的影片接管时钟，被替换掉的那次 `stop` 是空操作（`atomic.Pointer` + `CompareAndSwap`），所以迟到的 cleanup 不会关掉新影片的时钟。
 
 ## 通道
 
@@ -144,7 +163,7 @@ node shots/film.js http://localhost:8099/ out/take-s1 18 10
 2. **镜头必须是长寿对象**。`keyframe.New` 放在页面函数里意味着每次 commit 重建时钟，外部 seek 永远追不上；用 `sync.Once` 建一次，页面每次只 `take.Frame(cx)`。时钟本身挂在 `core.Holder` 上，锚在 `Tie(cx)` 收到的那个 app scope：**卸下页签再回来，画面必须还在原来的时刻**——不这么做的话平台的卸载会释放那个值节点，而释放后的值读出来是 0，镜头就静默地退回第 0 帧（`TestTakeNodeIsStable` 守着这条）。
 3. **seek 需要一次 commit 才能落到视图上**。`Frame` 把树包在 `core.Dynamic` 里、读一个 version 信号，`Seek` 顺手把它 +1：一次 commit 只重建这支镜头，别的卡片不动。
 
-还有一条更隐蔽的：**录制中不要自己播放**。`start` 在挂载时看到 `Recording()` 就只 seek 到 0，不启动 `core.Timing`；否则本地时钟和录制器每帧都在写同一个值，画面会在两者之间抖。
+还有一条更隐蔽的：**有人驱动时钟时不要自己播放**。`start` 在挂载时看到 `filmkit.Driven()`（录制器推了 `__filmT`，或者它所在的那支影片发布了自己的播放头）就只 seek 到那个时刻，不启动 `core.Timing`；否则本地时钟和外部时钟每帧都在写同一个值，画面会在两者之间抖。
 
 ## 测试
 
@@ -161,13 +180,13 @@ if got := float64(app.Query("id:take-story-moon")[0].Animated.TranslateX); math.
 
 ## 移植到别的项目
 
-这个包依赖 `core` 和 `filmkit`（时钟那三个文件）、八个文件约 1250 行：
+这个包依赖 `core` 和 `filmkit`（时钟那三个文件）、八个文件约 1430 行（`keyframe.go` 706、`lint.go` 301、`sample.go` 81、`clock.go` 82、`util.go` 15、两个时钟分支 17、测试 221）：
 
 | 文件 | 内容 |
 | --- | --- |
 | `keyframe.go` | `Take`/`Node`/`Keyframes`/编译器（`build`/`place`/`look`/`box`/`uniforms`）＋注册表 |
 | `clock.go` | `Tie(cx)`：一帧读一次 `filmkit.Now()`，动了就 `SeekAll`；也记住 app scope 供 `Holder` 锚定 |
-| `clock_js.go` / `clock_other.go` | `Recording()`：web 上认 `window.__filmT`，别处恒为 false |
+| `clock_js.go` / `clock_other.go` | `Recording()`：转问 `filmkit`；真正的判据是 `filmkit.Driven()`（录制器或影片发布的时钟） |
 | `sample.go` | `Sample`/`At`：纯数值求值，缓动直接复用 `Easing.At`，所以和渲染端逐位一致 |
 | `lint.go` | `Lint`/`Timeline`/`Dump` |
 | `keyframe_test.go` | 夹住、窗口形状、去重、六类 Lint、时间表 |

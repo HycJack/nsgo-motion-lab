@@ -2,6 +2,8 @@
 
 package keyframe
 
-// Recording is false off the web: there is no page to inject a clock into, and
-// tests drive takes with Seek directly.
-func Recording() bool { return false }
+import "nsgofilm/filmkit"
+
+// Recording reports whether the recorder is driving: off the web there is no
+// page to inject a clock into, and tests drive takes with Seek directly.
+func Recording() bool { return filmkit.Recording() }

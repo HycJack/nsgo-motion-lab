@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/oneo-me/nsgo/core"
+
+	"nsgofilm/filmkit"
 )
 
 // Kind is what a node draws.
@@ -475,13 +477,14 @@ func (t *Take) bind(cx *core.Scope) {
 	register(t)
 }
 
-// start is what a freshly mounted take does: play, or land on frame zero when a
-// recorder owns the clock. The zero lands from outside the build on purpose —
-// Seek bumps version, and bumping a signal while the tree that reads it is being
-// built re-enters the engine's frame loop (wasm dies of OOM there).
+// start is what a freshly mounted take does: follow the clock when something
+// outside owns it (a recorder, or the film it was mounted in), play otherwise.
+// The seek lands from outside the build on purpose — Seek bumps version, and
+// bumping a signal while the tree that reads it is being built re-enters the
+// engine's frame loop (wasm dies of OOM there).
 func (t *Take) start(cx *core.Scope) {
-	if Recording() {
-		cx.RequestAnimationFrame(func(time.Time) { t.Seek(0) })
+	if filmkit.Driven() {
+		cx.RequestAnimationFrame(func(time.Time) { t.Seek(seconds(filmkit.Now())) })
 		return
 	}
 	t.Play()

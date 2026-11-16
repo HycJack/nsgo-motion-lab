@@ -284,7 +284,7 @@ Kage 就是 Go 语法的 GLSL 分片着色器：入口 `Fragment(dst vec4, pos v
 
 把动效场景渲染成 mp4 的通用管线——`atlasintro`、`showreel` 和 Studio 的 take 都走这条路（录制器只有一份，在框架里；lab 不再留自己的副本）：
 
-1. **场景读 `filmkit.Now()`**，不读平台时钟。`filmkit` 的 web 时钟（`clock_js.go`）认 JS 全局 `__filmT`：录帧器设成几，场景就画第几秒；native 端自动退化为墙钟（`clock_other.go`），同一份代码两边跑。lab 直接 import `nsgofilm/filmkit`，不再有一份同名副本。
+1. **场景读 `filmkit.Now()`**，不读平台时钟。`filmkit` 的 web 时钟（`clock_js.go`）先认 JS 全局 `__filmT`（录帧器设成几，场景就画第几秒），再认影片自己发布的播放头（`film.Run` 挂载时 `filmkit.Drive`），最后退化为墙钟（`clock_other.go` / `Wall()`）；native 端同一份代码两边跑。lab 直接 import `nsgofilm/filmkit`，不再有一份同名副本。
 2. **`../film-framework/shots/film.js` 逐帧拍**：`node ../film-framework/shots/film.js <url> <outDir> <durSec> [fps]`——无头 Chrome 起 CDP，逐帧设 `__filmT`、双 rAF 同步（节点分镜多一帧）、截图进 `<outDir>/frames/`，最后 ffmpeg 拼成 `<outDir>/film.mp4`（`ENCODE=0` 只出帧）。因为时间是设定值不是墙钟，帧率无关、可重跑复现，截图慢半拍也不影响画面内容。
 3. **`filmkit/time.go` 是时间窗数学**：`Seg(t,a,b)` 把每一段动效归一到 0–1，`EaseOut`/`EaseInOut`/`EaseOutBack` 管缓动，`Win(t,a,b,ramp)` 管整场淡入淡出——16 秒的片子全部是这些函数的纯函数。
 

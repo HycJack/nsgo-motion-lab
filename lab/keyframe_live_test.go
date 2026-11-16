@@ -3,13 +3,82 @@ package main
 import (
 	"math"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/oneo-me/nsgo/nsgotest"
 
+	"nsgofilm/filmkit"
 	"nsgofilm/keyframe"
 )
+
+// TestTakeFollowsAPublishedClock checks the second driver: a film publishes its
+// own playhead (film.Run does exactly that at mount), and from then on the takes
+// inside it are seeked to it — pausing, scrubbing and stepping reach them, with
+// no recorder anywhere near.
+//
+// The discriminator is the difference between following and playing: with no
+// driver nsgotest settles the take's own animation straight to its last frame
+// (moon.x 300), while following a playhead at 6s stops it in the middle of its
+// 3.7→7s ramp.
+func TestTakeFollowsAPublishedClock(t *testing.T) {
+	var mu sync.Mutex
+	playhead := 6.0
+	stop := filmkit.Drive(func() float64 {
+		mu.Lock()
+		defer mu.Unlock()
+		return playhead
+	})
+	defer stop()
+	set := func(at float64) {
+		mu.Lock()
+		playhead = at
+		mu.Unlock()
+	}
+
+	app := nsgotest.Start(t, Root, nsgotest.Size(1180, 860))
+	app.Press("id:tab-Studio")
+	// The seek comes from Tie's frame loop, so a frame has to pass: nsgotest
+	// pumps animation frames on a clock advance, not on a settle.
+	frame := func() {
+		app.Advance(20 * time.Millisecond)
+		app.Settle()
+	}
+	frame()
+
+	story := keyframe.TakeNamed("story")
+	if story == nil {
+		t.Fatal("the storyboard take did not register")
+	}
+	moonX := func() float64 {
+		return float64(app.Query("id:take-story-moon")[0].Animated.TranslateX)
+	}
+
+	mid := story.Sample(6 * time.Second)["moon.x"]
+	if mid >= 299 {
+		t.Fatalf("the fixture is wrong: moon.x at 6s is %v, not mid-ramp", mid)
+	}
+	if got := moonX(); math.Abs(got-mid) > 0.5 {
+		t.Errorf("at 6s on the published clock moon.x renders %.2f, want %.2f (300 means it played on its own instead)",
+			got, mid)
+	}
+
+	// A scrub: the film jumps, the take has to land with it, not restart or keep
+	// running. 9s is past the ramp, so the node holds at its last key.
+	set(9)
+	frame()
+	if got, want := moonX(), story.Sample(9 * time.Second)["moon.x"]; math.Abs(got-want) > 0.5 {
+		t.Errorf("after scrubbing to 9s moon.x renders %.2f, want %.2f", got, want)
+	}
+
+	// And a pause: the clock stops moving, so the picture must hold still too.
+	set(9)
+	frame()
+	if got, want := moonX(), story.Sample(9 * time.Second)["moon.x"]; math.Abs(got-want) > 0.5 {
+		t.Errorf("a still clock moved the picture: moon.x %.2f, want %.2f", got, want)
+	}
+}
 
 // TestStudioTakesAreClean checks the three demo takes against their own lint.
 // The S3 card prints "lint: clean", so the page is lying if it does not hold —
@@ -46,6 +115,9 @@ func TestTakePlaysWhenNoOneDrives(t *testing.T) {
 	if story == nil {
 		t.Fatal("the storyboard take did not register")
 	}
+	// The takes are process-wide, so a test that ran earlier may have left a
+	// seek behind: what this test can assert is that no new one happened.
+	before := story.Progress()
 	app.Settle()
 
 	rendered := float64(app.Query("id:take-story-city1")[0].Animated.TranslateY)
@@ -53,8 +125,8 @@ func TestTakePlaysWhenNoOneDrives(t *testing.T) {
 		t.Errorf("city1 renders %.2f, want its last key %.2f — the take never played (frame zero is %.2f)",
 			rendered, want, story.At("city1.y", 0))
 	}
-	if story.Progress() != 0 {
-		t.Errorf("nothing seeked this take, yet Progress says %.2f", story.Progress())
+	if after := story.Progress(); after != before {
+		t.Errorf("something seeked a take nobody drives: Progress %.2f → %.2f", before, after)
 	}
 }
 

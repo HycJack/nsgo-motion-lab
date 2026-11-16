@@ -2,15 +2,13 @@
 
 package keyframe
 
-import "syscall/js"
+import "nsgofilm/filmkit"
 
-// Recording reports whether something outside is driving the film clock: the
-// recorder sets window.__filmT to a number of seconds before the app's own
-// scripts run, and filmkit.Now() then returns it instead of the wall clock.
+// Recording reports whether the recorder is driving: the recorder sets the JS
+// global window.__filmT to a number of seconds before the app's own scripts run,
+// and filmkit.Now() then returns it instead of anything else.
 //
-// The distinction matters at mount time. A take that mounts while a recorder is
-// driving must not start its own playback clock, or the two would write the same
-// value every frame and the recording would flicker between them.
-func Recording() bool {
-	return js.Global().Get("__filmT").Type() == js.TypeNumber
-}
+// A take does not need this to follow a film, only to know which of the two
+// drivers is in charge — see Driven on the clock side. Both answers are the same
+// question asked of filmkit, and this is the name the take code reads better as.
+func Recording() bool { return filmkit.Recording() }

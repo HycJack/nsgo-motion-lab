@@ -16,7 +16,7 @@ tools/         serve.py（Range 静态服务）/ frames.py（抓帧）/ eq.py（
 ../films/      例子录好的成片 mp4
 ```
 
-两种分镜共用同一个时钟（`filmkit.Now()`），所以录制器不必知道画面是怎么来的：
+两种分镜共用同一个时钟（`filmkit.Now()`），所以录制器不必知道画面是怎么来的。这个时钟按权威顺序取三个来源：录制器的 `window.__filmT` > 影片自己发布的播放头（`film.Run` 挂载时发布给 `filmkit`）> 墙钟。第三条是页面的常态，第二条让挂在一支片子里的节点分镜跟着影片暂停、拖进度、变速、审片逐帧走——不需要第二套钩子。
 
 | | 分镜是什么 | 适合 |
 | --- | --- | --- |
@@ -237,7 +237,7 @@ take.Disc("moon").At(120, 60).Size(54, 54).Fill(core.RGB(0x2f5f86)).
 take.Text("cap", "3 SHOTS · 1 CLOCK").Font(17).At(40, 84).
 	On("opacity", keyframe.Win(2*time.Second, 7*time.Second, 400*time.Millisecond))
 
-keyframe.Tie(cx)          // 跟影片时钟：录制器推 __filmT，没人推就用墙钟
+keyframe.Tie(cx)          // 跟时钟走：__filmT / 所在影片的播放头 / 墙钟
 take.Frame(cx)            // 编译；播放 0 commit/帧，定格 1 commit/帧
 ```
 

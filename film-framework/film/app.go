@@ -57,6 +57,12 @@ func root(f Film) func(*core.Scope) core.Node {
 		review := audit || timeline                        // 审片行为：两种入口共用
 		inFilm := core.NewSignal(cx, !timeline)            // 时间轴总览 → 影片视图
 
+		// 把影片自己的时间发布成「全片唯一时钟」：挂在这支片子里的任何东西
+		// （节点分镜、canvas 之外的 shot）从此读同一个时间，暂停、拖进度、
+		// 审片逐帧、变速都一起生效。录制器推的 __filmT 仍然压过它，
+		// 卸载时 cleanup 交还时钟。
+		cx.Cleanup(filmkit.Drive(func() float64 { return filmT.Get() }))
+
 		// 审片控制条的显隐，照常用播放器的规矩：暂停时常驻；
 		// 播放中 2.5 秒没动静就藏起来（把字幕让出来），点画面、
 		// 动鼠标或碰控制条任意一处都会唤出。
@@ -81,10 +87,14 @@ func root(f Film) func(*core.Scope) core.Node {
 		var prevWall float64
 		var prevT float64
 		loop = func(time.Time) {
-			t := filmkit.Now()
+			// 起始值是墙钟，不是 filmkit.Now()：后者优先读已发布的时钟，
+			// 而这个循环每帧把结果发布出去——读它等于读自己的输出，无声片
+			// 会永远停在原地。录制器那条另算。
+			t := filmkit.Wall()
 			switch {
 			case recording:
 				// 时钟归录制器管。
+				t = filmkit.Now() // __filmT
 			case review && f.Audio != "" && playing.Get():
 				// 声音当主时钟：画面跟着声音走。
 				t = mediaT.Get()
@@ -93,7 +103,7 @@ func root(f Film) func(*core.Scope) core.Node {
 				t = filmT.Get()
 			case review && playing.Get():
 				// 无声片播放：从当前位置按墙钟推进（乘审片变速），播完停住。
-				now := filmkit.Now()
+				now := filmkit.Wall()
 				t = filmT.Get() + min(max(now-prevWall, 0), 0.1)*rate.Get()
 				if t >= f.Duration {
 					t = f.Duration
@@ -111,7 +121,7 @@ func root(f Film) func(*core.Scope) core.Node {
 			default:
 				// 无声片按墙钟走。
 			}
-			prevWall = filmkit.Now()
+			prevWall = filmkit.Wall()
 			filmT.Set(t)
 			// 音效：检测影片时钟跨过 T 的沿（录制模式不出声）。
 			if !recording {

@@ -110,7 +110,7 @@ camera 包里有 5 张（`030 Orbit`、`031 Crane up`、`176 Fly-through`、`179
 | `shots/film.js` | 录制器：多 Chrome 并行分段、断点续录、缺帧检查；`CLIP=` 只录一块、`PRESS=` 先点进某个页签 |
 | `tools/` | serve.py（Range 静态服务）/ mux.py（视频 + 音轨 + SFX 合成）/ eq.py / frames.py / diff.py |
 
-**两种分镜，一个时钟。** `film` 的分镜是画布函数（`func(*core.Drawing, *Frame)`），画什么由参数算；`keyframe` 的分镜是一棵节点树，动什么由轨道说。两者都只认 `filmkit.Now()`，所以录制器不必知道里面是哪种——推进 `__filmT`，画面就到那一帧：
+**两种分镜，一个时钟。** `film` 的分镜是画布函数（`func(*core.Drawing, *Frame)`），画什么由参数算；`keyframe` 的分镜是一棵节点树，动什么由轨道说。两者都只认 `filmkit.Now()`，所以录制器不必知道里面是哪种——推进 `__filmT`，画面就到那一帧。这个时钟按权威顺序取三个来源：录制器的 `__filmT` > 影片发布的播放头（`film.Run` 挂载时 `filmkit.Drive` 发布，卸载时停掉）> 墙钟，于是挂在一支片子里的节点分镜会跟着影片暂停、拖进度、变速、审片逐帧走：
 
 ```go
 take := keyframe.New("orbit", 8*time.Second)          // 一个镜头＝一个时钟
