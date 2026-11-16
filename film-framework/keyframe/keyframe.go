@@ -116,6 +116,13 @@ var Linear = core.Easing{Bezier: core.Linear}
 // EaseInOut is the usual choice for a window: slow in, slow out.
 var EaseInOut = core.Easing{Bezier: core.EaseInOut}
 
+// EaseOut is the entrance curve: it leaves fast and settles slowly into place,
+// which is what a slide or a rise wants. EaseIn is its mirror, for an exit.
+var (
+	EaseOut = core.Easing{Bezier: core.EaseOut}
+	EaseIn  = core.Easing{Bezier: core.EaseIn}
+)
+
 // Len is how many keyframes the channel has.
 func (k Keyframes) Len() int { return len(k.keys) }
 
@@ -236,6 +243,10 @@ type Take struct {
 	dur  time.Duration
 	root *Node
 
+	// delay is where this take sits in the film that drives it: the take's own
+	// 0 is film time delay. It shifts what a clock seeks to, nothing else.
+	delay time.Duration
+
 	p      *core.AnimatedValue
 	cx     *core.Scope
 	holder *core.Holder
@@ -262,6 +273,18 @@ func (t *Take) Name() string { return t.name }
 
 // Duration is how long the take runs.
 func (t *Take) Duration() time.Duration { return t.dur }
+
+// Delay places the take in whatever drives the clock: at film time d the take
+// shows its own 0, so a take mounted over one beat of a film does not also run
+// during the others. It shifts seeking only — Play is the take's own clock and
+// still starts at 0.
+func (t *Take) Delay(d time.Duration) *Take {
+	t.delay = d
+	return t
+}
+
+// Offset is where the take starts in the film that drives it.
+func (t *Take) Offset() time.Duration { return t.delay }
 
 // Add puts a node at the top of the scene graph.
 func (t *Take) Add(kind Kind, name string) *Node {
@@ -484,7 +507,9 @@ func (t *Take) bind(cx *core.Scope) {
 // engine's frame loop (wasm dies of OOM there).
 func (t *Take) start(cx *core.Scope) {
 	if filmkit.Driven() {
-		cx.RequestAnimationFrame(func(time.Time) { t.Seek(seconds(filmkit.Now())) })
+		cx.RequestAnimationFrame(func(time.Time) {
+			t.Seek(seconds(filmkit.Now()) - t.delay)
+		})
 		return
 	}
 	t.Play()
@@ -775,11 +800,13 @@ func TakeNamed(name string) *Take {
 	return registry[name]
 }
 
-// SeekAll freezes every live take at d. A take shorter than d clamps, which is
-// what an exporter wants at the tail of a sequence.
+// SeekAll freezes every live take at film time d: each take sees d minus its
+// own Delay, so takes placed on different beats of one film all land correctly.
+// A take shorter than what is left of d clamps, which is what an exporter wants
+// at the tail of a sequence.
 func SeekAll(d time.Duration) {
 	for _, t := range Takes() {
-		t.Seek(d)
+		t.Seek(d - t.delay)
 	}
 }
 

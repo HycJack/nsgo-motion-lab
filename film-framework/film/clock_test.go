@@ -1,6 +1,7 @@
 package film
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/oneo-me/nsgo/nsgotest"
 
 	"nsgofilm/filmkit"
+	"nsgofilm/keyframe"
 )
 
 // TestFilmPublishesItsPlayhead checks the live half of "one clock": a mounted
@@ -55,5 +57,74 @@ func TestFilmPublishesItsPlayhead(t *testing.T) {
 	// The subtest's cleanup has disposed the film by now.
 	if filmkit.Driven() {
 		t.Error("a disposed film left its clock published; the next film could not take over")
+	}
+}
+
+// TestLayerFollowsTheFilmClock mounts a take the way a film does and reads the
+// rendered node: the layer is in the tree, and it sits where the take's own
+// sample says at the film's playhead — the whole point of Over.
+func TestLayerFollowsTheFilmClock(t *testing.T) {
+	beat := keyframe.New("beat", 4*time.Second)
+	beat.Box("moon").Size(20, 20).At(0, 90).Fill(core.RGB(0xffffff)).
+		On("x", keyframe.Keys(0, 20, 4, 300))
+
+	f := Film{
+		W: 320, H: 180,
+		Duration: 4,
+		Shots:    []Shot{{D: 4, Fn: func(*core.Drawing, *Frame) {}}},
+		Layers:   []Layer{Over(beat, 0, 4)},
+	}
+	app := nsgotest.Start(t, New(f), nsgotest.Size(320, 180))
+	// A take schedules its one mount-time seek for the next frame. Let it land
+	// now: if it lands after the sleep below it would look like following.
+	app.Advance(20 * time.Millisecond)
+	app.Settle()
+
+	// A layer is in the tree only while the film is inside its window, and the
+	// whole film is this one's window.
+	if !app.Exists("id:take-beat-moon") {
+		t.Fatal("the layer's take is not in the tree; Over mounted nothing")
+	}
+
+	// Let the film run on real time, then read the picture again. A take seeks
+	// once when it mounts; only the follow loop moves it afterwards, so this is
+	// what separates a layer that follows the playhead from one frozen on it.
+	time.Sleep(220 * time.Millisecond)
+	app.Advance(20 * time.Millisecond)
+	app.Settle()
+
+	// Same clock, same frame: what the take samples at the film's playhead is
+	// what it renders.
+	now := filmkit.Now()
+	want := beat.Sample(time.Duration(now * float64(time.Second)))["moon.x"]
+	if now < 0.15 {
+		t.Fatalf("the playhead is at %.3fs; the test proved nothing", now)
+	}
+	got := float64(app.Query("id:take-beat-moon")[0].Animated.TranslateX)
+	if math.Abs(got-want) > 0.5 {
+		t.Errorf("the moon renders at x=%.1f at %.3fs, want %.2f from the track", got, now, want)
+	}
+}
+
+// TestLayerWindowHidesIt checks the predicate that keeps a layer unmounted
+// outside its window — the reason a take authored for one beat does not sit
+// frozen through the rest of the film.
+func TestLayerWindowHidesIt(t *testing.T) {
+	whole := Layer{}
+	beat := Layer{Start: 2, End: 5}
+	tail := Layer{Start: 2}
+
+	for _, c := range []struct {
+		l    Layer
+		t    float64
+		want bool
+	}{
+		{whole, 0, true}, {whole, 9, true},
+		{beat, 1.99, false}, {beat, 2, true}, {beat, 5, true}, {beat, 5.01, false},
+		{tail, 1, false}, {tail, 6, true},
+	} {
+		if got := c.l.shows(c.t); got != c.want {
+			t.Errorf("layer[%v,%v] at %.2fs shows %v, want %v", c.l.Start, c.l.End, c.t, got, c.want)
+		}
 	}
 }

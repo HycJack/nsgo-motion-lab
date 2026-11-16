@@ -232,5 +232,5 @@ TSX apps are the same shape: `App.tsx` imports `mount, signal, Text, View` from 
 | The `nsgo` tool, packaging, signing | `docs/architecture/tool.md` |
 | Testing and selectors | `docs/architecture/testing.md` |
 | Animation, motion presets, keyframes, shader and canvas motion, 3D | `references/animation.md` (this skill); `core/motion.go`, `core/animated.go`, `core/canvas.go` |
-| Shots as data, seeking, frame export, film recorder | `references/keyframe.md` (this skill); `film-framework/keyframe/`, `film-framework/shots/film.js` |
+| Shots as data, seeking, frame export, film recorder | `references/keyframe.md` (this skill); `film-framework/keyframe/`, `film-framework/film/layer.go`, `film-framework/shots/film.js` |
 | What is missing | `docs/roadmap.md` |

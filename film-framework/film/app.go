@@ -15,6 +15,7 @@ import (
 	"github.com/oneo-me/nsgo/core"
 
 	"nsgofilm/filmkit"
+	"nsgofilm/keyframe"
 )
 
 // Film 是一部片子的全部声明。
@@ -26,6 +27,7 @@ type Film struct {
 	Audio    string     // 音频载体的 asset: 路径（只带声音的 mp4）；空 = 无声片
 	Button   string     // 「开始播放」按钮文案；空 = 「开始播放」
 	Shots    []Shot     // 分镜表：相邻两幕重叠 Fade 秒即交叉溶解
+	Layers   []Layer    // 层：节点树（keyframe.Take）叠在画布上，跟同一个时钟
 	Subs     []Sub      // 字幕表（屏幕空间，不受镜头影响）
 	SubStyle SubStyle   // 字幕样式；用 DefaultSubStyle 生成
 	Sfx      []Sfx      // 音效表：影片时钟走到 T 时响起（录制模式不出声）
@@ -62,6 +64,12 @@ func root(f Film) func(*core.Scope) core.Node {
 		// 审片逐帧、变速都一起生效。录制器推的 __filmT 仍然压过它，
 		// 卸载时 cleanup 交还时钟。
 		cx.Cleanup(filmkit.Drive(func() float64 { return filmT.Get() }))
+
+		// 有层就要有跟随者：Tie 一帧读一次时钟，动了就把每支 take seek 过去。
+		// 少了它，take 只在挂载那一次对表，之后定在原地 —— 片子在走、字卡不动。
+		if len(f.Layers) > 0 {
+			keyframe.Tie(cx)
+		}
 
 		// 审片控制条的显隐，照常用播放器的规矩：暂停时常驻；
 		// 播放中 2.5 秒没动静就藏起来（把字幕让出来），点画面、
@@ -152,6 +160,22 @@ func root(f Film) func(*core.Scope) core.Node {
 		}
 
 		children := []core.Node{canvas}
+
+		// 层：节点分镜（keyframe.Take）只能活在节点树里，所以它们以层的形式
+		// 叠在画布上。窗口由 Layer.Start/End 决定，窗口外不挂载 —— 不画，
+		// 也不推进。它们和画布读的是同一个 filmT，所以暂停、拖进度、审片
+		// 逐帧一起生效（那条链是 filmkit.Drive → keyframe.Tie）。
+		//
+		// 用 Show 而不是 Dynamic：Dynamic 每帧重建整层（take 每帧重新 bind
+		// 一次 = 每帧造一个 Holder，wasm 会 OOM），Show 只在真假翻转时才
+		// 换分支，播放期间只有一次求值、零提交。
+		for _, ly := range f.Layers {
+			ly := ly
+			children = append(children, layerBox(cx, f, core.Show{
+				When: func() bool { return ly.shows(filmT.Get()) },
+				Then: ly.Node,
+			}))
+		}
 
 		// 音效的媒体元素：信号已在上面建好，元素在 children 就位。
 		for _, sl := range slots {

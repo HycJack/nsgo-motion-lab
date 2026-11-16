@@ -81,6 +81,38 @@ three.js 没有后三项，因为写 three.js 的人**看着屏幕调**。AI 写
 
 发布是「最新的一次生效」：后挂载的影片接管时钟，被替换掉的那次 `stop` 是空操作（`atomic.Pointer` + `CompareAndSwap`），所以迟到的 cleanup 不会关掉新影片的时钟。
 
+## 让 take 活在影片里：`Film.Layers`
+
+take 是节点树，画布分镜是 canvas，两者要同框就挂成一层：
+
+```go
+film.Run(film.Film{
+    Shots:  film.Series(0.6, film.Shot{D: 21, Fn: backdrop}),
+    Layers: []film.Layer{
+        film.Over(title, 0.4, 7.0),   // = film.Layer{Start: 0.4, End: 7.0, Node: title.Frame}
+        film.Over(cards, 7.0, 14.6),
+    },
+})
+```
+
+| 概念 | 谁管 | 语义 |
+| --- | --- | --- |
+| `Layer.Start` / `End` | `film` | 窗口外**不挂载**（不画、不推进、不进树）；`End: 0` = 到片尾 |
+| `Take.Delay(d)` | `keyframe` | take 自己的 0 对齐到影片第 d 秒；`SeekAll` 减掉它 |
+| `opacity` 轨道 | 写分镜的人 | 进出场淡入淡出 |
+
+三件事分开是有原因的：
+
+- **`Delay` 而不是 `Start`。** 单独播放（`Play()`）时 take 从自己的 0 开始，这条路不能被窗口污染；`Delay` 只在被外部驱动时（`SeekAll`、`start` 的对表）把读数平移。所以「同一支 take 先给影片用、再拿去单播」不需要改。
+- **窗口只是挂载判据，不是淡出。** 用 `Layer.End` 做淡出会让最后一帧被硬切掉；淡出走轨道，窗口在淡完之后才摘。
+- **`Over` 顺手 `Delay`。** 层的窗口和 take 的对表是同一个数，两处都写必然写歪。
+
+`film` 里有层时自己调 `keyframe.Tie(cx)`——跟随循环只需要一个，挂在影片 scope 上，窗口内的 take 各自 seek 到 `Now() - Delay`。
+
+挂载用 `core.Show{When, Then}` 而不是 `core.Dynamic`：`Dynamic` 每帧重建整层（take 每帧重新 bind，每帧一个新 Holder），`Show` 的 `When` 只在真假翻转时才换分支，播放期间零提交。层本身是一个满幅 `Absolute` 的盒子，`OnLayout` 量出 `min(W/w, H/h)` 再用 `Transform.Scale` 缩一次，所以 take 只按设计尺寸写。
+
+窗口、`Delay`、缩放都在 `film/layer.go`；测试 `TestLayerFollowsTheFilmClock` 用一次真实的 0.2 秒等待证明它跟的是播放头（把 `Tie` 注释掉，它会停在 x=20，而轨道要求 36）。
+
 ## 通道
 
 `On` 的通道名按节点类型限定；写错不是静默失败，`Lint` 会指出来。
@@ -102,6 +134,7 @@ keyframe.KeysAt(8300*ms, 24, 15100*ms, 60) // 或者用 time.Duration
 keyframe.Win(500*ms, 5*time.Second, 400*ms) // 窗口：0→1（ramp）→保持→1→0
 keyframe.FadeIn(from, ramp) / FadeOut(to, ramp)
 keyframe.Keys(...).Ease(keyframe.EaseInOut)  // 整条轨道一个缓动
+keyframe.EaseOut / keyframe.EaseIn            // 进场快出慢停 / 出场慢起快走
 ```
 
 - **一条轨道只能有一个缓动**。平台是每条 `Interpolate` 一个 `Easing`，所以「先 ease-in 再 ease-out」不能靠一条轨道表达；要么拆成两条轨道（不同通道），要么接受一个整段缓动。`Lint` 会把「同一个通道写了两条轨道」报成 fatal（只有最后一条会渲染）。
@@ -180,7 +213,7 @@ if got := float64(app.Query("id:take-story-moon")[0].Animated.TranslateX); math.
 
 ## 移植到别的项目
 
-这个包依赖 `core` 和 `filmkit`（时钟那三个文件）、八个文件约 1430 行（`keyframe.go` 706、`lint.go` 301、`sample.go` 81、`clock.go` 82、`util.go` 15、两个时钟分支 17、测试 221）：
+这个包依赖 `core` 和 `filmkit`（时钟那三个文件）、八个文件约 1600 行（`keyframe.go` 819、`lint.go` 324、`sample.go` 87、`clock.go` 90、`util.go` 18、两个时钟分支 23、测试 241）：
 
 | 文件 | 内容 |
 | --- | --- |

@@ -3,6 +3,7 @@
 # NSGo build cache and packaged app
 lab/.nsgo/
 lab/dist/
+examples/*/.nsgo/
 
 # capture scratch (screenshots that are not part of docs/)
 lab/shots/*.png

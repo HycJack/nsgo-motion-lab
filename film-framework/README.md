@@ -12,7 +12,7 @@ film/        引擎：Film 配置 → 时钟循环、交叉溶解、音频载体
 keyframe/    节点分镜：场景树 + 关键帧轨道 → core.Node，能播、能定格、能自检
 shots/film.js  录制器：推时钟 → CDP 逐帧截图 → ffmpeg 编码（WORKERS 并行、断点续录）
 tools/         serve.py（Range 静态服务）/ frames.py（抓帧）/ eq.py（LaTeX→路径）/ mux.py（混音合成）/ diff.py（确定性回归）
-../examples/   例子工程：math-demo（数学动画）/ cylinder-demo（圆柱展开教学片）/ style-demo（风格画廊）…
+../examples/   例子工程：math-demo（数学动画）/ cylinder-demo（圆柱展开教学片）/ style-demo（风格画廊）/ take-demo（层与窗口）…
 ../films/      例子录好的成片 mp4
 ```
 
@@ -255,6 +255,7 @@ keyframe.Keys(0, 24, 3, 200)               // 关键帧：秒 → 值
 keyframe.KeysAt(8300*ms, 24, 15100*ms, 60)  // 或者直接给 time.Duration
 keyframe.Win(500*ms, 5*time.Second, 400*ms) // 窗口：0→1（带 ramp）→保持→0
 keyframe.Keys(...).Ease(keyframe.EaseInOut) // 一条轨道一个缓动
+keyframe.EaseOut                            // 进场：快出慢停（EaseIn 是它的镜像）
 ```
 
 **没有屏幕也能审。** `Lint()` 报十二类真错：节点重名、`Track` 指向不存在的节点、通道写错（`eye.z` 写到 `Box` 上）、同一通道两条轨道、关键帧超出镜头、时间重复的帧被丢掉（硬切要两条通道）、`opacity` 越界、某条轨道 >¼ 时长完全不动（死区间），以及画不出来的节点——camera 没 `Program`、canvas 没 `Draw`、disc 没宽度（撑满成方块）、group 用 `At` 定位。`Timeline()` 把每条轨道按自己的缓动画成 48 列 ASCII 曲线，`Dump()` 再加节点清单；`Sample(t)` 是纯数值求值，用来写断言而不是比截图。
@@ -269,6 +270,40 @@ node shots/film.js http://127.0.0.1:8099/ ../lab/shots/rec/take-s1 18 10
 ```
 
 录制器一看到 `[data-testid^="take-"]` 就多等一帧、再等 `SETTLE` ms（默认 60）：seek 先落进时钟，平台帧时钟才把动画值写进视图树。演示见 `../lab/page_studio.go`（三张卡：18s 相机长镜、12s 三幕分镜、时间表与 Lint 的自画像），成片 `../lab/docs/take-s1.mp4`、`../lab/docs/story-s2.mp4`。
+
+## 把 take 放进影片：层与窗口
+
+`film.Shot` 画在画布上，`keyframe.Take` 活在节点树里。两者要出现在同一帧，
+就把 take 挂成一层：
+
+```go
+film.Run(film.Film{
+    W: 1920, H: 1080, Duration: 21,
+    Shots: film.Series(0.6, film.Shot{D: 21, Fn: backdrop}),   // 底图：一画到底
+    Layers: []film.Layer{
+        film.Over(title, 0.4, 7.0),    // 0.4s 挂上，7.0s 摘掉
+        film.Over(cards, 7.0, 14.6),
+        film.Over(outro, 14.6, 21),
+    },
+    Subs: []film.Sub{...},
+})
+```
+
+- **窗口决定「在不在」，轨道决定「看不看得见」。** `Over` 的 `start`/`end` 是影片
+  时间：窗口外这层根本不挂载（不画、不推进），窗口内它叠在画布上面；淡入淡出
+  仍然写在各条 `opacity` 轨道里。两件事分开，暂停、拖进度、逐帧才对得上。
+- **`film` 自己调 `keyframe.Tie(cx)`**，有层就有时钟跟随，不必在 `main` 里补一行。
+- **`Take.Delay(d)`**（`Over` 内部用它）：把 take 自己的 0 对齐到影片第 d 秒。
+  窗口整体搬家时关键帧一个都不用改——`SeekAll` 会把 d 减掉。单独播放的
+  `Play()` 不受影响，它永远从自己的 0 开始。
+- **层按画幅缩放并裁切**：1920×1080 的 take 在 1280×720 的窗口里等比缩到
+  0.667 居中，越界的部分被裁掉（`overflow-hidden`），所以设计尺寸只管一处。
+- **字节点量自己的宽度、不换行**：多行正文一行一个 `Text`，别指望自动折行。
+- **别用 `core.Dynamic` 包窗口判断**：`Dynamic` 每帧重建，take 会每帧重新
+  `bind` 一次（每帧造一个 Holder）。用 `core.Show`——它的 `When` 只在真假翻转
+  时才换分支，播放期间零提交。`Over` 已经这么做了。
+- 例：`../examples/take-demo/`（21 秒：一层 canvas 底图 + 三层字卡 + 三条字幕），
+  成片 `../films/take-demo.mp4`，动图 `../lab/docs/take-demo.gif`。
 
 ## 拍一部新片
 
