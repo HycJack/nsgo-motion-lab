@@ -49,8 +49,10 @@ go tool nsgo build -target all -output dist
 | `shader3d.go` · `page_3d.go` | 光线步进场景（相机＝uniform）＋ CPU 投影立方体 ＋ CSS 3D 翻面，9 张 |
 | `page_one_take.go` | 一镜到底的 3 张：18s 的相机长镜、它的时间表、12s 的 2D 视差落版 |
 | `page_studio.go` · `takes.go` | Studio 页签的 3 张：`keyframe` 写的 18s 相机长镜、12s 三幕分镜、时间表与 Lint 自画像；takes 用 `sync.Once` 长寿 |
-| `studio_live_test.go` | 定格与纯数值对齐：逐节点比对渲染值 vs `Sample`（误差 0.01），并守住节点不重建 |
+| `keyframe_live_test.go` | 定格与纯数值对齐：逐节点比对渲染值 vs `Sample`（误差 0.01），并守住节点不重建 |
 | `app_test.go` | 无头测试：着色器编译 + 页签切换 + 控件交互 + 8 个动效包的首尾卡片 |
+| `shots/*.js` | `docs/` 里那些截图的来源（`lab/shots/` 只入 git 脚本，帧和 png 一律忽略）：`packs.js` → `pack-*.gif`、`uikit.js`/`uipack.js` → `uikit*.gif`、`shot.js` 单页、`tabshots.js` camera 页、`take.js` 一镜到底抽帧、`cards.js` 单卡中途与静止 |
+| `atlasintro/` · `showreel/` | 两个独立子工程（`go run` 各自起），用 `nsgofilm/film` 出片；录制统一走 `../film-framework/shots/film.js` |
 
 ## 画布：`core.Canvas`
 
@@ -278,17 +280,17 @@ Kage 就是 Go 语法的 GLSL 分片着色器：入口 `Fragment(dst vec4, pos v
 - **绝对定位的子节点不撑父节点**：一个只有绝对子节点的 `View`（没有 `Position`、没有 `Width/Height`）量出来是 0×0，里面的东西全被裁掉。192 张卡片里有 57 张一开始就是这么写的，画出来是一片空白。统一改成 `stageFill`（`Absolute` + 四边 0）就好了。
 - **`AnimatedStyle` 的每个字段都是接口，不是数字**：`Scale: 1` 编译不过，`Scale: constant(cx, 1)` 才行；同理静态色要写成 `solid(cx, col)`（一个两端同色的 `Interpolate`）。`Width`/`Height` 不在 `AnimatedStyle` 里，要动宽度就动固定宽度元素的 `ScaleX`。
 
-## 出片：`filmkit` + `showreel` + `shots/film.js`
+## 出片：`filmkit` + `showreel` + `film-framework/shots/film.js`
 
-把动效场景渲染成 mp4 的通用管线——`atlasintro` 与 `showreel` 都走这条路：
+把动效场景渲染成 mp4 的通用管线——`atlasintro`、`showreel` 和 Studio 的 take 都走这条路（录制器只有一份，在框架里；lab 不再留自己的副本）：
 
-1. **场景读 `filmkit.Now()`**，不读平台时钟。`filmkit` 的 web 时钟（`clock_js.go`）认 JS 全局 `__filmT`：录帧器设成几，场景就画第几秒；native 端自动退化为墙钟（`clock_other.go`），同一份代码两边跑。
-2. **`shots/film.js` 逐帧拍**：`node shots/film.js <url> <outDir> <durSec> [fps]`——无头 Chrome 起 CDP，逐帧设 `__filmT`、双 rAF 同步、截图进 `<outDir>/frames/`，最后 ffmpeg 拼成 `<outDir>/film.mp4`（`ENCODE=0` 只出帧）。因为时间是设定值不是墙钟，帧率无关、可重跑复现，截图慢半拍也不影响画面内容。
+1. **场景读 `filmkit.Now()`**，不读平台时钟。`filmkit` 的 web 时钟（`clock_js.go`）认 JS 全局 `__filmT`：录帧器设成几，场景就画第几秒；native 端自动退化为墙钟（`clock_other.go`），同一份代码两边跑。lab 直接 import `nsgofilm/filmkit`，不再有一份同名副本。
+2. **`../film-framework/shots/film.js` 逐帧拍**：`node ../film-framework/shots/film.js <url> <outDir> <durSec> [fps]`——无头 Chrome 起 CDP，逐帧设 `__filmT`、双 rAF 同步（节点分镜多一帧）、截图进 `<outDir>/frames/`，最后 ffmpeg 拼成 `<outDir>/film.mp4`（`ENCODE=0` 只出帧）。因为时间是设定值不是墙钟，帧率无关、可重跑复现，截图慢半拍也不影响画面内容。
 3. **`filmkit/time.go` 是时间窗数学**：`Seg(t,a,b)` 把每一段动效归一到 0–1，`EaseOut`/`EaseInOut`/`EaseOutBack` 管缓动，`Win(t,a,b,ramp)` 管整场淡入淡出——16 秒的片子全部是这些函数的纯函数。
 
 `showreel/` 现在的样片是**圆柱的侧面展开**（与 `../examples/cylinder-demo/` 同源）：20.5 秒、三幕、连续相机——环绕亮相标 r/h → 滑翔到侧视看无滑动滚动沿母线展开 → 升高俯视量 C/h 尺寸线并落版公式 S = 2πrh。1920×1080@30fps 一帧不缺，成品 `dist/film.mp4`（gitignore，用上面的命令重录），`../films/cylinder-unroll.mp4` 是同一部片子的归档。
 
-> 在 DSH/受限沙箱里，无头 Chrome 会因子进程崩溃（SIGTRAP）活不过十几秒，`film.js` 在这类宿主机上跑不完——这是沙箱的问题，不是脚本的问题；在普通机器上直接用即可，沙箱内可改由宿主自带的浏览器驱动逐帧截屏后再 ffmpeg。
+> 在 DSH/受限沙箱里，无头 Chrome 会因子进程崩溃（SIGTRAP）活不过十几秒，`film.js`（框架那份）在这类宿主机上跑不完——这是沙箱的问题，不是脚本的问题；在普通机器上直接用即可，沙箱内可改由宿主自带的浏览器驱动逐帧截屏后再 ffmpeg。
 
 ## Studio 页签：节点分镜 `keyframe`
 
