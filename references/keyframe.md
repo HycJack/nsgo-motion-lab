@@ -111,7 +111,7 @@ film.Run(film.Film{
 
 挂载用 `core.Show{When, Then}` 而不是 `core.Dynamic`：`Dynamic` 每帧重建整层（take 每帧重新 bind，每帧一个新 Holder），`Show` 的 `When` 只在真假翻转时才换分支，播放期间零提交。层本身是一个满幅 `Absolute` 的盒子，`OnLayout` 量出 `min(W/w, H/h)` 再用 `Transform.Scale` 缩一次，所以 take 只按设计尺寸写。
 
-窗口、`Delay`、缩放都在 `film/layer.go`；测试 `TestLayerFollowsTheFilmClock` 用一次真实的 0.2 秒等待证明它跟的是播放头（把 `Tie` 注释掉，它会停在 x=20，而轨道要求 36）。
+窗口、`Delay`、缩放都在 `film/layer.go`；两条测试守着：`TestLayerFollowsTheFilmClock` 用一次真实的 0.2 秒等待证明它跟的是播放头（把 `Tie` 注释掉，它会停在 x=20，而轨道要求 36），`TestDelayedTakeShowsItsOwnTime` 把时钟钉在 3 秒、`Delay` 设成 2 秒，要求画面是这支 take 自己的 1 秒——两条 seek 路径（挂载那一次、跟随循环每一次）都各做一次变异验证，去掉 `- t.delay` 分别报 x=300 与 x=400。
 
 两个例子：`examples/take-demo/`（16:9，21 秒，三张字卡按窗口换）、`examples/portrait-demo/`（竖屏 1080×1920，10 秒，一条 `Over(rail, 0, 0)` 铺满全片的进度轨 + 三张字卡）。竖屏那个顺带证明设计画幅与窗口尺寸无关：同一份分镜先按 720×1280 的窗口录过一遍，等比缩放之后一个字都没挪。
 
