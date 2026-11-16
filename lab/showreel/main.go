@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	dw    float32 = 1920.0
-	dh    float32 = 1080.0
-	fade          = 0.5
+	dw   float32 = 1920.0
+	dh   float32 = 1080.0
+	fade         = 0.5
 
 	r3 = 1.0 // 底面半径（世界单位）
 	h3 = 2.0 // 高 = 母线长（轴长）
@@ -181,7 +181,7 @@ func sceneCylinder(d *core.Drawing, f *film.Frame) {
 	if p := filmkit.Seg(f.LocalT, 4.5, 5.2); p > 0 {
 		a.Poly3(d, [][3]float64{{0, 2*r3 + 0.16, z0}, {0, 2*r3 + 0.16, z0 + h3}}, float64(p), gold, film.A(1), 3)
 		if p >= 1 {
-			a.Label3D(d, "h", [3]float64{0, 2*r3 + 0.52, z0 + h3 / 2}, 44, gold, film.A(1), 0.5)
+			a.Label3D(d, "h", [3]float64{0, 2*r3 + 0.52, z0 + h3/2}, 44, gold, film.A(1), 0.5)
 		}
 	}
 }
@@ -235,7 +235,7 @@ func sceneMeasure(d *core.Drawing, f *film.Frame) {
 		a.Poly3(d, [][3]float64{{2*math.Pi*r3 + 0.26, 0.03, z0}, {2*math.Pi*r3 + 0.26, 0.03, z0 + h3*float64(p)}}, 1, gold, film.A(1), 3)
 		if p >= 1 {
 			if fade := film.A(filmkit.F32(filmkit.Seg(f.LocalT, 4.0, 4.4))); fade > 0 {
-				a.Label3D(d, "h", [3]float64{2*math.Pi*r3 + 0.55, 0.06, z0 + h3 / 2}, 48, gold, fade, 0.5)
+				a.Label3D(d, "h", [3]float64{2*math.Pi*r3 + 0.55, 0.06, z0 + h3/2}, 48, gold, fade, 0.5)
 			}
 		}
 	}

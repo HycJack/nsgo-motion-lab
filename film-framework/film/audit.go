@@ -95,7 +95,7 @@ func auditBar(cx *core.Scope, f Film, filmT *core.Signal[float64], playing *core
 					ticks = append(ticks, core.View{Style: core.Style{
 						Position:   core.Absolute,
 						Left:       core.Pt(core.Points(frac*auditTrackW - 1.5)),
-						Top:        core.Pt((auditHitH - auditRailH) / 2 - 5),
+						Top:        core.Pt((auditHitH-auditRailH)/2 - 5),
 						Width:      core.Pt(3),
 						Height:     core.Pt(auditRailH + 10),
 						Background: core.RGB(0xF87171),

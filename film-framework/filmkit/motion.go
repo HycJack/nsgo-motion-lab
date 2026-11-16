@@ -34,9 +34,9 @@ func (s Spring) At(t float64) float64 {
 	if t <= 0 {
 		return 0
 	}
-	omega := math.Sqrt(k / m)              // 无阻尼角频率
-	zeta := c / (2 * math.Sqrt(k*m))       // 阻尼比
-	x0, v0 := -1.0, s.Vel0                 // 位移约定：目标 1，起点 0 → 偏移 -1
+	omega := math.Sqrt(k / m)        // 无阻尼角频率
+	zeta := c / (2 * math.Sqrt(k*m)) // 阻尼比
+	x0, v0 := -1.0, s.Vel0           // 位移约定：目标 1，起点 0 → 偏移 -1
 
 	if zeta < 1 { // 欠阻尼：衰减振荡
 		wd := omega * math.Sqrt(1-zeta*zeta)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/oneo-me/nsgo/core"
@@ -70,14 +71,22 @@ func studioStory() *keyframe.Take {
 		x := 40 + float64(i)*84
 		h := 40 + float64(i%3)*18
 		start := 0.3 + float64(i)*0.28
-		wide.Add(keyframe.Box, "city"+string(rune('a'+i))).At(x, 176).Size(30, h).
+		wide.Add(keyframe.Box, "city"+strconv.Itoa(i+1)).At(x, 176).Size(30, h).
 			Fill(core.RGB(0x24405c)).Radius(4).
 			On("y", keyframe.Keys(0, 176, start, 176-h).Ease(keyframe.EaseInOut)).
 			On("opacity", keyframe.Keys(0, 0, start, 1))
 	}
 
 	orbit := take.Group("orbit")
-	orbit.On("opacity", keyframe.Win(3700*ms, 7600*ms, 400*ms))
+	// The second shot holds at full opacity until the frame the third arrives on,
+	// then cuts out over 20 ms — the same 20 ms the third cut snaps in with. That
+	// overlap is the point: two ramps that cross at one boundary sum to full
+	// brightness, so there is no frame in between that shows neither shot. Give
+	// the fade-out its own window ending before 8.0s and the stage goes empty for
+	// a frame or two, which is what "dissolve on one clock" is supposed to prevent.
+	orbit.On("opacity", keyframe.KeysAt(
+		0*ms, 0, 3700*ms, 0, 4100*ms, 1, 7980*ms, 1, 8*time.Second, 0,
+	).Ease(keyframe.Linear))
 	orbit.Add(keyframe.Disc, "moon").At(120, 60).Size(54, 54).Fill(core.RGB(0x2f5f86)).
 		On("x", keyframe.KeysAt(3700*ms, 120, 7*time.Second, 300)).
 		On("scale", keyframe.KeysAt(3700*ms, 0.6, 5200*ms, 1.1, 7*time.Second, 0.9))

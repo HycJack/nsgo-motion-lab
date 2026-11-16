@@ -47,7 +47,7 @@ take shoot · 18.0s · 3 tracks
 
 ## 与 three.js 的对应
 
-| three.js | studio | 差别 |
+| three.js | keyframe | 差别 |
 | --- | --- | --- |
 | `new Scene()` | `keyframe.New(name, dur)` | 场景自带时长，不需要第二个对象 |
 | `Object3D` + `.add()` | `Node` + `.Add(kind, name)` / `take.Box(...)` | 类型在 `Kind` 里（`Box/Disc/Text/Canvas/Camera/Group`） |
@@ -94,13 +94,13 @@ keyframe.Keys(...).Ease(keyframe.EaseInOut)  // 整条轨道一个缓动
 
 ```go
 for _, issue := range take.Lint() {
-	fmt.Println(issue)          // "error: cityc.y has keys outside the take (0, 12s)"
+	fmt.Println(issue)          // "error: city3.y: key 1 is at 13.00s, outside the take's 12.00s"
 }
-fmt.Println(take.Timeline())    // 每行一条轨道 + 48 列 ASCII 曲线
+fmt.Println(take.Timeline())    // 每行一条轨道 + 48 列 ASCII 曲线（按该轨道自己的缓动画）
 fmt.Println(take.Dump())        // 再加上节点清单
 ```
 
-`Lint` 报的东西（都是真的踩过）：
+`Lint` 报的东西（十二类，都是真的踩过）：
 
 | 检查 | 为什么 |
 | --- | --- |
@@ -109,11 +109,15 @@ fmt.Println(take.Dump())        // 再加上节点清单
 | 通道不存在 | `"eye.z"` 写到 `Box` 上不会报错，只会什么都不动 |
 | 同一通道两条轨道 | 只有最后一条生效 |
 | 关键帧超出镜头时长 | 那一段永远播不到 |
-| 关键帧不递增 | 平台侧会 clamp 或丢帧 |
+| 时间重复的帧被丢掉 | `dedupe` 已经吃了它，Timeline 上看不出来；硬切要两条通道 |
 | `opacity` 超出 0..1 | 有的平台直接画出透明度 2 |
 | 死区间 | 一条轨道有 >¼ 时长完全不动，多半是写错了端点 |
+| camera 没有 `Program` | 渲染成一个空节点，没有报错 |
+| canvas 没有 `Draw` | 同上 |
+| disc 没有宽度 | 撑满父容器，变成一个方块 |
+| group 用 `At` 定位 | group 是满幅合成箱，只有 x/y 轨道能移动它 |
 
-`Timeline` 是给「看不见画面」的人看的：一行一条轨道，48 列 ASCII 曲线（`" .:-=+*#"`），时间是秒。
+`Timeline` 是给「看不见画面」的人看的：一行一条轨道，48 列 ASCII 曲线（`" .:-=+*#"`），时间是秒。曲线按**该轨道自己的缓动**画——`EaseInOut` 的行和匀速的行长得不一样，否则时间表画的是一条没人渲染的线。
 
 ## 导出：交给同一个录制器
 
@@ -135,10 +139,10 @@ node shots/film.js http://localhost:8099/ out/take-s1 18 10
 三个坑，都不是「多试几次就好」的坑：
 
 1. **页面外的写操作不会自己生效**。`p.Set(t)` 只改值节点：没有 flush、没有请求帧，树照旧画上一帧。所以 `Tie` 的循环跑在 `cx.RequestAnimationFrame` 的回调里，seek 就发生在一次真正的帧上（`Scope.Post` 在 web 上没有宿主，会 panic）。
-2. **镜头必须是长寿对象**。`keyframe.New` 放在页面函数里意味着每次 commit 重建时钟，外部 seek 永远追不上；用 `sync.Once` 建一次，页面每次只 `take.Frame(cx)`。
+2. **镜头必须是长寿对象**。`keyframe.New` 放在页面函数里意味着每次 commit 重建时钟，外部 seek 永远追不上；用 `sync.Once` 建一次，页面每次只 `take.Frame(cx)`。时钟本身挂在 `core.Holder` 上，锚在 `Tie(cx)` 收到的那个 app scope：**卸下页签再回来，画面必须还在原来的时刻**——不这么做的话平台的卸载会释放那个值节点，而释放后的值读出来是 0，镜头就静默地退回第 0 帧（`TestTakeNodeIsStable` 守着这条）。
 3. **seek 需要一次 commit 才能落到视图上**。`Frame` 把树包在 `core.Dynamic` 里、读一个 version 信号，`Seek` 顺手把它 +1：一次 commit 只重建这支镜头，别的卡片不动。
 
-还有一条更隐蔽的：**录制中不要自己播放**。`attach` 在挂载时看到 `Recording()` 就只 seek 到 0，不启动 `core.Timing`；否则本地时钟和录制器每帧都在写同一个值，画面会在两者之间抖。
+还有一条更隐蔽的：**录制中不要自己播放**。`start` 在挂载时看到 `Recording()` 就只 seek 到 0，不启动 `core.Timing`；否则本地时钟和录制器每帧都在写同一个值，画面会在两者之间抖。
 
 ## 测试
 
@@ -146,21 +150,24 @@ node shots/film.js http://localhost:8099/ out/take-s1 18 10
 // 图上写的数，和算子算出来的数，必须一致
 take.Seek(9 * time.Second)
 app.Settle()
-if got := float64(app.Find("id:take-story-moon").Animated.TranslateX); math.Abs(got-take.At("moon.x", 9*time.Second)) > 0.01 { … }
+if got := float64(app.Query("id:take-story-moon")[0].Animated.TranslateX); math.Abs(got-take.At("moon.x", 9*time.Second)) > 0.01 { … }
 ```
 
 - `Sample(t)` 返回 `map[string]float64`（`"moon.x"`、`"wide.opacity"`），不碰任何平台，纯函数。
-- TestID 约定 `take-<镜头名>-<节点路径>`，所以 `app.Find("id:take-shoot-cam")` 就是那个 shader。
+- TestID 约定 `take-<镜头名>-<节点路径>`，所以 `app.Query("id:take-shoot-cam")` 就是那个 shader。
 - 镜头名全局唯一（`Takes()` 按注册顺序），`TakeNamed` 反查。
 
 ## 移植到别的项目
 
-这个包只依赖 `core`，三个文件、约 900 行：
+这个包依赖 `core` 和 `filmkit`（时钟那三个文件）、八个文件约 1250 行：
 
 | 文件 | 内容 |
 | --- | --- |
 | `keyframe.go` | `Take`/`Node`/`Keyframes`/编译器（`build`/`place`/`look`/`box`/`uniforms`）＋注册表 |
+| `clock.go` | `Tie(cx)`：一帧读一次 `filmkit.Now()`，动了就 `SeekAll`；也记住 app scope 供 `Holder` 锚定 |
+| `clock_js.go` / `clock_other.go` | `Recording()`：web 上认 `window.__filmT`，别处恒为 false |
 | `sample.go` | `Sample`/`At`：纯数值求值，缓动直接复用 `Easing.At`，所以和渲染端逐位一致 |
 | `lint.go` | `Lint`/`Timeline`/`Dump` |
+| `keyframe_test.go` | 夹住、窗口形状、去重、六类 Lint、时间表 |
 
-拷过去改两处即可：`rayProgram` 换成你的 shader，调色板换成你的颜色。它不 import 本仓库的 `theme.go`，也没有包级状态（除了镜头注册表）。
+拷过去改两处即可：`rayProgram` 换成你的 shader，调色板换成你的颜色。它不 import 本仓库的 `theme.go`；包级状态只有镜头注册表和 `Tie` 记下的 app scope。

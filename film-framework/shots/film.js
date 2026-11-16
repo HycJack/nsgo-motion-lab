@@ -21,9 +21,12 @@
 //   READY=selector  wait for this before recording (default: canvas)
 //   PRESS=text      click the element with that exact text first (a tab)
 //   CLIP=selector   record only that element's rect (a card, a stage) instead
-//                   of the viewport; HIDE=sel,sel hides page furniture first.
-//                   A 节点分镜 (keyframe) is detected by its [data-testid^=take-]
-//                   nodes and gets one more frame plus SETTLE ms (default 60).
+//                   of the viewport
+//   HIDE=sel,sel    hide page furniture before recording (a tab bar, a chip)
+//   SETTLE=ms       extra wait per frame; the default is 60 on a page whose
+//                   nodes carry a [data-testid^=take-], else 0 — a keyframe
+//                   take is seeked on one frame and written to the tree on the
+//                   next, so it needs one more frame than a canvas scene
 //
 // Frames land in <outDir>/frames/f00000.jpg… and the mp4 in
 // <outDir>/film.mp4.
@@ -194,7 +197,15 @@ async function worker(k, chunk) {
       await send("Input.dispatchMouseEvent", { type: "mousePressed", x: p.x, y: p.y, button: "left", buttons: 1, clickCount: 1 });
       await sleep(60);
       await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: p.x, y: p.y, button: "left", buttons: 0, clickCount: 1 });
-      await sleep(2000);
+      // 点进去之后等它真的画出来：节点分镜等自己的 take 节点，别的页面等
+      // 一个固定的稳定期。固定 sleep 会在慢机器上截到还没挂载的帧——那几帧
+      // 是空的，而且只有看成品才发现。
+      let ready = false;
+      for (let i = 0; i < 40; i++) {
+        if (await evaluate(`!!document.querySelector('[data-testid^="take-"]')`)) { ready = true; break; }
+        await sleep(250);
+      }
+      await sleep(ready ? 500 : 1500);
     }
 
     // A 节点分镜（keyframe）多要一帧：seek 先落进时钟，平台的帧时钟再把
@@ -220,6 +231,16 @@ async function worker(k, chunk) {
       })()`);
       if (!v || v === "none") throw new Error(`worker ${k}: CLIP selector matched nothing: ${process.env.CLIP}`);
       clip = JSON.parse(v);
+      // scrollIntoView 可能还在滚：等一帧再量一次，位置稳定了才开始。
+      await rafN(2);
+      const again = JSON.parse(await evaluate(`(() => {
+        const b = document.querySelector(${JSON.stringify(process.env.CLIP)}).getBoundingClientRect();
+        return JSON.stringify({ x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height), scale: 1 });
+      })()`));
+      if (again.height > 0 && again.width > 0) clip = again;
+      if (clip.width < 2 || clip.height < 2) {
+        throw new Error(`worker ${k}: CLIP element measured ${clip.width}x${clip.height} — is it visible?`);
+      }
       console.log(`worker ${k}: clip ${clip.width}x${clip.height} at ${clip.x},${clip.y}`);
     }
 

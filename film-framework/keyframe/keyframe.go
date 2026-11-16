@@ -133,7 +133,7 @@ func KeysAt(pairs ...any) Keyframes {
 		case float64:
 			out.keys = append(out.keys, Key{T: v, V: toFloat(pairs[i+1])})
 		default:
-			panic(fmt.Sprintf("keyframe: KeysAt time %d is %T, not time.Duration", i/2, pairs[i]))
+			panic(fmt.Sprintf("keyframe: KeysAt time %d is %T, not time.Duration or float64 (seconds)", i/2, pairs[i]))
 		}
 	}
 	return out
@@ -180,8 +180,15 @@ func FadeOut(to, ramp time.Duration) Keyframes {
 // track is one channel's keyframes, before they are compiled to a node.
 type track struct {
 	path string
-	keys []Key
-	ease core.Easing
+	// channel is kept beside the path because a camera's channels have dots of
+	// their own: "cam.eye.x" is the eye.x channel of the node "cam", and
+	// splitting the path on its last dot would call the channel "x".
+	channel string
+	keys    []Key
+	ease    core.Easing
+	// dropped counts keys that repeated a time and were thrown away, so Lint
+	// can say so: a hard cut written as two keys at once loses its second one.
+	dropped int
 }
 
 // Ease replaces the track's easing.
@@ -227,10 +234,10 @@ type Take struct {
 	dur  time.Duration
 	root *Node
 
-	p       *core.AnimatedValue
-	cx      *core.Scope
-	started bool
-	seekTo  float64
+	p      *core.AnimatedValue
+	cx     *core.Scope
+	holder *core.Holder
+	seekTo float64
 	// version is bumped by a seek so the Frame dynamic rebuilds this take
 	// alone: one commit per frozen frame, none while it plays.
 	version *core.Signal[int]
@@ -247,7 +254,8 @@ func New(name string, d time.Duration) *Take {
 	return t
 }
 
-// Name is the take's identity, used by the seek hook.
+// Name is the take's identity: the registry key that TakeNamed and the
+// recorder look a take up by.
 func (t *Take) Name() string { return t.name }
 
 // Duration is how long the take runs.
@@ -283,15 +291,23 @@ func (t *Take) Group(name string) *Node { return t.Add(Group, name) }
 // Lookup finds a node by name.
 func (t *Take) Lookup(name string) *Node { return t.root.find(name) }
 
-// Track records a channel by path, e.g. "camera.fov" or "title.opacity". The
-// node methods are shorter, but a path is what data-driven takes have. A path
-// naming a node that does not exist keeps the track and leaves the reporting
-// to Lint, so a typo shows up as a message rather than a panic in a renderer.
+// Track records a channel by path, e.g. "camera.fov", "title.opacity" or
+// "cam.eye.z". The node methods are shorter, but a path is what data-driven
+// takes have. A path naming a node that does not exist keeps the track and
+// leaves the reporting to Lint, so a typo shows up as a message rather than a
+// panic in a renderer.
 func (t *Take) Track(path string, keys Keyframes) *Node {
-	name, ch := splitPath(path)
-	if n := t.root.find(name); n != nil {
-		return n.On(ch, keys)
+	// The split point is whichever dot leaves a node that exists, because a
+	// channel may hold dots of its own: "cam.eye.x" is the camera's eye.x.
+	for i := len(path) - 1; i > 0; i-- {
+		if path[i] != '.' {
+			continue
+		}
+		if n := t.root.find(path[:i]); n != nil {
+			return n.On(path[i+1:], keys)
+		}
 	}
+	name, ch := splitPath(path)
 	n := &Node{take: t, kind: Text, name: name, missing: path}
 	t.root.kids = append(t.root.kids, n)
 	return n.On(ch, keys)
@@ -300,7 +316,8 @@ func (t *Take) Track(path string, keys Keyframes) *Node {
 // On records a channel's keyframes on this node. It returns the node, so a
 // take reads as a chain of one-line statements.
 func (n *Node) On(channel string, keys Keyframes) *Node {
-	tr := &track{path: n.path() + "." + channel, keys: dedupe(keys.keys)}
+	kept, dropped := dedupe(keys.keys)
+	tr := &track{path: n.path() + "." + channel, channel: channel, keys: kept, dropped: dropped}
 	tr.ease = core.Easing{Bezier: core.Linear}
 	if easedByDefault[channel] {
 		tr.ease = core.Easing{Bezier: core.EaseInOut}
@@ -355,7 +372,8 @@ func (n *Node) Add(kind Kind, name string) *Node {
 	return kid
 }
 
-// Path is the node's address in the take, used by tracks and by the seek API.
+// Path is the node's address in the take: what a track is written against and
+// what its test ID ends with.
 func (n *Node) Path() string { return n.path() }
 
 func (n *Node) path() string {
@@ -396,69 +414,77 @@ func splitPath(p string) (string, string) {
 }
 
 // dedupe drops keyframes that repeat a time, keeping the first: an
-// interpolation needs strictly increasing input.
-func dedupe(keys []Key) []Key {
+// interpolation needs strictly increasing input. It reports how many it dropped
+// so a track can say its hard cut lost half of itself.
+func dedupe(keys []Key) ([]Key, int) {
 	out := make([]Key, 0, len(keys))
+	dropped := 0
 	for _, k := range keys {
 		if len(out) > 0 && k.T <= out[len(out)-1].T {
+			dropped++
 			continue
 		}
 		out = append(out, k)
 	}
-	return out
+	return out, dropped
 }
 
-// Node compiles the take into an NSGo node and starts the clock on first
-// build. Everything under it is a function of the take's one value, so the
-// whole take costs no commits per frame.
-func (t *Take) Node(cx *core.Scope) core.Node {
-	t.attach(cx)
-	return t.root.build(cx, nil)
-}
-
-// Frame is Node for a take that outlives a page: the graph sits in a dynamic
-// over the take's own version, so a Seek commits this subtree and nothing else,
-// while playback stays on the frame clock with no commits at all.
+// Frame compiles the take into an NSGo node, and keeps the clock alive across
+// page changes. Everything under it is a function of the take's one value, so
+// the whole take costs no commits per frame.
 //
-// This is the piece that makes an export possible. The platform writes animated
-// values into the view tree when it builds them; a clock set from outside has to
-// ask for a build to show the change, and one commit per rendered frame is
-// exactly what an export should cost.
+// The clock and the tree hang off a core.Holder, not off the page that shows
+// them: a page that unmounts releases what it built, and a released value reads
+// zero, so a take that put its clock in the page would silently drop back to
+// frame zero every time the tab it lives in was closed. The holder moves the
+// built tree between places instead, state and all.
+//
+// The graph sits in a dynamic over the take's own version, so a Seek commits
+// this subtree and nothing else, while playback stays on the frame clock with
+// no commits at all. That is what makes an export possible: the platform writes
+// animated values into the tree when it builds them, so a clock set from outside
+// has to ask for a build — one commit per frozen frame, which is exactly what an
+// export should cost.
 func (t *Take) Frame(cx *core.Scope) core.Node {
-	t.attach(cx)
-	return core.Dynamic(func(cx *core.Scope) core.Node {
-		if t.version != nil {
-			t.version.Get() // a seek bumps this, and only this subtree rebuilds
-		}
-		return t.root.build(cx, nil)
-	})
+	t.bind(cx)
+	return t.holder.Place()
 }
 
-// attach binds the take to a scope and starts it the first time it is mounted.
-// A different scope means the page was rebuilt under it, so the value node has
-// to be made again: the take object survives a rebuild, its binding does not.
-func (t *Take) attach(cx *core.Scope) {
-	if t.p == nil || t.cx != cx {
-		t.cx = cx
-		t.version = core.NewSignal(cx, 0)
-		t.p = core.NewAnimatedValue(cx, t.seekTo)
-		t.started = false
+// bind gives the take its clock and its holder, once per app scope. Ancestoring
+// on the app's own scope rather than on the calling page is what lets a take
+// outlive a mount; Tie records that scope, and without a Tie a take is bound to
+// the page that builds it (it plays, but a page change restarts it).
+func (t *Take) bind(cx *core.Scope) {
+	anchor := cx
+	if s := anchorScope(); s != nil {
+		anchor = s
 	}
-	if !t.started {
-		t.started = true
-		switch {
-		case Recording():
-			// A recorder owns the clock: starting playback here would write the
-			// same value from two places, every frame. Land on frame zero
-			// instead — but not from inside this build. A seek starts an
-			// animation, and starting one while the tree is being built
-			// re-enters the engine's frame loop (wasm dies of OOM there).
-			cx.RequestAnimationFrame(func(time.Time) { t.Seek(0) })
-		default:
-			t.Play()
-		}
+	if t.holder != nil && t.cx == anchor {
+		return
 	}
+	t.cx = anchor
+	t.holder = core.NewHolder(anchor, func(hcx *core.Scope) core.Node {
+		t.version = core.NewSignal(hcx, 0)
+		t.p = core.NewAnimatedValue(hcx, t.seekTo)
+		t.start(hcx)
+		return core.Dynamic(func(dcx *core.Scope) core.Node {
+			t.version.Get() // a seek bumps this, and only this subtree rebuilds
+			return t.root.build(dcx, nil)
+		})
+	})
 	register(t)
+}
+
+// start is what a freshly mounted take does: play, or land on frame zero when a
+// recorder owns the clock. The zero lands from outside the build on purpose —
+// Seek bumps version, and bumping a signal while the tree that reads it is being
+// built re-enters the engine's frame loop (wasm dies of OOM there).
+func (t *Take) start(cx *core.Scope) {
+	if Recording() {
+		cx.RequestAnimationFrame(func(time.Time) { t.Seek(0) })
+		return
+	}
+	t.Play()
 }
 
 // Play restarts the take from zero on the frame clock.
@@ -503,7 +529,9 @@ func (t *Take) Seek(d time.Duration) {
 }
 
 // Progress is the fraction the clock was last told to take, so an exporter can
-// prove its seek landed instead of trusting a picture.
+// prove its seek landed instead of trusting a picture. It is the position a
+// seek left behind, not a live reading: a take playing on its own clock has no
+// synchronous value to report, and asking for one would need a round trip.
 func (t *Take) Progress() float64 { return t.seekTo }
 
 // Bound reports whether the take has a live clock on a live scope, which is
@@ -696,8 +724,8 @@ func (t *Take) node(tr *track) core.AnimatedNode {
 	return core.Interpolate(t.p, core.Interpolation{Input: in, Output: out, Easing: tr.ease})
 }
 
-// testID names a node in the render tree so tests and the seek hook can find
-// it: "take-<name>-<path>".
+// testID names a node in the render tree so a test, an exporter's clip
+// selector or a screenshot can find it: "take-<name>-<path>".
 func testID(n *Node) string {
 	if n.path() == "" {
 		return ""
@@ -705,8 +733,10 @@ func testID(n *Node) string {
 	return "take-" + n.take.name + "-" + n.path()
 }
 
-// registry lets the platform-side seek hook reach every live take without the
-// caller threading a list through the app.
+// registry lets the recorder, Dump-time tooling and tests reach every live take
+// without the caller threading a list through the app. A take registers when it
+// is first mounted, so a take built inside a page function is replaced on every
+// commit — build takes once (a package-level var) and the registry is stable.
 var (
 	mu       sync.Mutex
 	registry = map[string]*Take{}

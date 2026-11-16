@@ -166,9 +166,9 @@ node ../../film-framework/shots/film.js http://127.0.0.1:8099/ out 21 30   # WOR
 - 着色器在运行时编译，编译失败就是 panic，所以 `TestShadersCompile` 用 `core.CompileShader` 把每份源码过一遍。
 - 页签切换、UI kit 的组件状态、控件是否真的连到信号，各有测试（`TestTabsSwitchPages`、`TestUIKitControls`、`TestControlsAreLive`）。
 - 一镜到底的三张也进 `TestTabsSwitchPages`：切到 `One take` 要能摸到三张卡的标题和两个 Replay。
-- Studio 页签的三张由 `film-framework/keyframe` 驱动：`TestStudioTakes`（切页签、摸到三支 take、Replay 作用到时钟）与 `TestTakeSeekMatchesSample`（逐节点比对渲染值和纯数值，误差 0.01）守着「播放与定格不可能漂移」。
+- Studio 页签的三张由 `film-framework/keyframe` 驱动：`TestStudioTakes`（切页签、摸到三支 take、Replay 作用到时钟）、`TestTakeSeekMatchesSample`（逐节点比对渲染值和纯数值，误差 0.01）与 `TestTakeNodeIsStable`（页签来回一趟，定格还在原处）守着「播放与定格不可能漂移」。
 - film-framework 与三个例子工程在本仓库路径下 `go vet` / `go test` / wasm 构建全过；成片以 WORKERS=4 并行录制，`tools/diff.py` 双录比对逐帧一致。
-- 「同一个镜头」是拍出来验过的，不是看着代码推的：`lab/docs/take-s1.mp4` 与 `lab/docs/story-s2.mp4` 由 `film-framework/shots/film.js` 逐帧推进 `__filmT` 录制（`READY`/`PRESS`/`CLIP`/`HIDE` 四个环境变量），抽帧看过 12.2s 的下三分之一、S2 的 1s/4s/7s/9.5s 三幕交接，没有空帧。
+- 「同一个镜头」是拍出来验过的，不是看着代码推的：`lab/docs/take-s1.mp4` 与 `lab/docs/story-s2.mp4` 由 `film-framework/shots/film.js` 逐帧推进 `__filmT` 录制（`READY`/`PRESS`/`CLIP`/`HIDE` 四个环境变量），抽帧看过 12.2s 的下三分之一、S2 的 1s/4s/7.9s/8.0s 三幕交接，没有空帧（7.9s 是第二幕、8.0s 是第三幕，中间没有一帧黑）。
 
 ## 许可与致谢
 

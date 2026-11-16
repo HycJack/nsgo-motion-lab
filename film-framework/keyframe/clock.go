@@ -23,16 +23,30 @@ import (
 // while something outside is driving time.
 func Tie(cx *core.Scope) {
 	tieMu.Lock()
+	// cx is the app's own scope here (the one Root is called with), which is
+	// also where a take anchors its clock so a page change cannot release it.
+	anchor = cx
 	if tied == cx {
 		tieMu.Unlock()
 		return
 	}
 	tied = cx
+	tieGen++
+	gen := tieGen
 	tieMu.Unlock()
 
 	last := -1.0
 	var loop func(time.Time)
 	loop = func(time.Time) {
+		// A new scope means a new mount: this loop's scope is gone, so it
+		// stops instead of running beside the one that replaced it (two
+		// loops seeking the same takes would double the work per frame).
+		tieMu.Lock()
+		stale := gen != tieGen
+		tieMu.Unlock()
+		if stale {
+			return
+		}
 		now := filmkit.Now()
 		switch {
 		case !Recording():
@@ -48,9 +62,20 @@ func Tie(cx *core.Scope) {
 }
 
 var (
-	tieMu sync.Mutex
-	tied  *core.Scope
+	tieMu  sync.Mutex
+	tied   *core.Scope
+	tieGen int
+	// anchor is the app's own scope, the one Tie was called with: a take hangs
+	// its clock there so unmounting a page does not release it.
+	anchor *core.Scope
 )
+
+// anchorScope is the app's own scope, or nil before Tie has run.
+func anchorScope() *core.Scope {
+	tieMu.Lock()
+	defer tieMu.Unlock()
+	return anchor
+}
 
 // Progress reports the film clock each take was last seeked to, which is how a
 // recorder proves the seek landed instead of trusting a picture.

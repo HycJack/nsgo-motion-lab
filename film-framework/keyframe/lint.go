@@ -2,6 +2,7 @@ package keyframe
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -34,8 +35,9 @@ func (i Issue) String() string {
 }
 
 // Lint checks the take and returns what it found, worst first. An empty result
-// means every track names a real channel, every key is inside the take, and
-// something moves for most of the running time.
+// means every track names a real channel, every key is inside the take, every
+// drawable node can actually draw, and something moves for most of the running
+// time.
 func (t *Take) Lint() []Issue {
 	var out []Issue
 	seen := map[string]int{} // node name -> how many nodes share it
@@ -69,11 +71,15 @@ func (t *Take) Lint() []Issue {
 		}
 		allowed := channels[n.kind]
 		for _, tr := range n.tracks {
-			_, ch := splitPath(tr.path)
-			if !hasChannel(allowed, ch) {
+			if !hasChannel(allowed, tr.channel) {
 				out = append(out, Issue{Path: tr.path, Fatal: true,
-					Msg: fmt.Sprintf("%s has no channel %q; it has %s", kindName(n.kind), ch, list(allowed))})
+					Msg: fmt.Sprintf("%s has no channel %q; it has %s", kindName(n.kind), tr.channel, list(allowed))})
 			}
+		}
+		// The same failure one level up: a node whose kind cannot draw is
+		// still in the tree, still gets a test ID, and stays empty.
+		if issue, bad := undrawable(n); bad {
+			out = append(out, issue)
 		}
 	})
 
@@ -83,17 +89,20 @@ func (t *Take) Lint() []Issue {
 				Msg: fmt.Sprintf("%d tracks target one channel; only the last one renders", len(list))})
 		}
 		tr := list[0]
+		if tr.dropped > 0 {
+			// dedupe already removed them, so this is the only place the
+			// author can learn that half of a hard cut is gone. A cut needs
+			// two channels (one out, one in), not two keys at one time.
+			out = append(out, Issue{Path: path,
+				Msg: fmt.Sprintf("%d keyframes repeated a time and were dropped; a hard cut needs its own channel", tr.dropped)})
+		}
 		for i, k := range tr.keys {
 			if k.T < 0 || k.T > t.dur.Seconds() {
 				out = append(out, Issue{Path: path, Fatal: true,
 					Msg: fmt.Sprintf("key %d is at %.2fs, outside the take's %.2fs", i, k.T, t.dur.Seconds())})
 			}
-			if i > 0 && k.T <= tr.keys[i-1].T {
-				out = append(out, Issue{Path: path, Fatal: true,
-					Msg: fmt.Sprintf("key %d at %.2fs does not come after key %d at %.2fs", i, k.T, i-1, tr.keys[i-1].T)})
-			}
 		}
-		if _, ch := splitPath(path); ch == "opacity" {
+		if tr.channel == "opacity" {
 			for _, k := range tr.keys {
 				if k.V < 0 || k.V > 1 {
 					out = append(out, Issue{Path: path,
@@ -159,12 +168,12 @@ func (t *Take) deadSpans() [][2]float64 {
 func (t *Take) Timeline() string {
 	type row struct {
 		path string
-		keys []Key
+		tr   *track
 	}
 	var rows []row
 	t.root.walk(func(n *Node) {
 		for _, tr := range n.tracks {
-			rows = append(rows, row{tr.path, tr.keys})
+			rows = append(rows, row{tr.path, tr})
 		}
 	})
 	sort.SliceStable(rows, func(i, j int) bool { return rows[i].path < rows[j].path })
@@ -180,25 +189,39 @@ func (t *Take) Timeline() string {
 	const cols = 48
 	for _, r := range rows {
 		var spark []byte
-		lo, hi := 0.0, 0.0
-		for _, k := range r.keys {
+		// The row's range is the track's own, not zero up: a lane that runs
+		// 120 → 300 would otherwise use the top of the ramp only, and a lane
+		// that holds 0.5 would look like a curve with nothing under it.
+		lo, hi := math.Inf(1), math.Inf(-1)
+		for _, k := range r.tr.keys {
 			lo = minf(lo, k.V)
 			hi = maxf(hi, k.V)
 		}
-		if hi-lo < 1e-9 {
+		// A track that never changes has no curve to draw, but a row of spaces
+		// reads as "no track at all", which is the opposite of what it means.
+		flat := hi-lo < 1e-9
+		if flat {
 			hi = lo + 1
 		}
 		for c := 0; c < cols; c++ {
-			v := t.eval(&track{keys: r.keys, ease: core.Easing{Bezier: core.Linear}},
-				float64(c)/float64(cols-1))
+			if flat {
+				spark = append(spark, '-')
+				continue
+			}
+			// The track's own easing, not time itself: a row that eases in
+			// and out has to look different from a straight ramp, or the
+			// timeline is drawing a curve nobody renders.
+			v := t.eval(r.tr, float64(c)/float64(cols-1))
 			// An ASCII ramp, not block characters: a timeline gets read in a
 			// console as often as on a canvas, and block glyphs mangle there.
+			// The lowest level is a dot, not a space: a lane clamped at its
+			// minimum for most of the take would otherwise read as no lane.
 			level := int(7 * (v - lo) / (hi - lo))
-			spark = append(spark, " .:-=+*#"[level])
+			spark = append(spark, ".:-=+*#@"[max(0, min(7, level))])
 		}
-		times := make([]string, len(r.keys))
-		for i, k := range r.keys {
-			times[i] = fmt.Sprintf("%.1f", k.T)
+		times := make([]string, len(r.tr.keys))
+		for i, k := range r.tr.keys {
+			times[i] = secondsText(k.T)
 		}
 		fmt.Fprintf(&b, "  %-*s %s  %s\n", width, r.path, spark, strings.Join(times, " "))
 	}
@@ -217,6 +240,25 @@ func (t *Take) Dump() string {
 			n.path(), kindName(n.kind), n.w, n.h, colour(n.fill), anim)
 	}
 	return b.String()
+}
+
+// undrawable reports a node that is in the tree but can never put a pixel down:
+// a camera without a program, a canvas without a Draw, a disc with no width (it
+// stretches to its parent and stops being a circle), or a group moved with At
+// instead of a track (a group is a full-bleed box; build pins it at 0,0 and
+// only a translation track moves it).
+func undrawable(n *Node) (Issue, bool) {
+	switch {
+	case n.kind == Camera && n.prog == nil:
+		return Issue{Path: n.path(), Fatal: true, Msg: "camera has no Program; it draws nothing"}, true
+	case n.kind == Canvas && n.draw == nil:
+		return Issue{Path: n.path(), Fatal: true, Msg: "canvas has no Draw; it draws nothing"}, true
+	case n.kind == Disc && n.w <= 0:
+		return Issue{Path: n.path(), Fatal: true, Msg: "disc has no width; it fills the stage as a rectangle"}, true
+	case n.kind == Group && (n.x != 0 || n.y != 0):
+		return Issue{Path: n.path(), Msg: "group ignores At; move it with an x or y track"}, true
+	}
+	return Issue{}, false
 }
 
 func kindName(k Kind) string {

@@ -177,7 +177,7 @@ func EqWriteGradient(d *core.Drawing, e Eq, x, y, scale float32, p float64, c1, 
 func mixColor(a, b core.Color, t float64) core.Color {
 	ar, ag, ab, aa := a.Components()
 	br, bg, bb, ba := b.Components()
-	m := func(u, v float64) uint32 { return uint32((u + (v-u)*t)*255 + 0.5) }
+	m := func(u, v float64) uint32 { return uint32((u+(v-u)*t)*255 + 0.5) }
 	return core.Color(m(ar, br)<<24 | m(ag, bg)<<16 | m(ab, bb)<<8 | m(aa, ba))
 }
 

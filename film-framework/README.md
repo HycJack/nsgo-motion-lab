@@ -245,7 +245,7 @@ take.Frame(cx)            // 编译；播放 0 commit/帧，定格 1 commit/帧
 
 | Kind | 画什么 | 通道 |
 | --- | --- | --- |
-| `Group` | 不画东西，分组＋统一淡出 | `x` `y` `opacity` |
+| `Group` | 不画东西，分组＋统一淡出（满幅合成箱，`At` 无效，只能靠 `x`/`y` 轨道移动） | `x` `y` `opacity` |
 | `Box` `Disc` `Text` | 矩形 / 圆盘 / 文字（自带底板、内距） | `x` `y` `scale` `scaleX` `scaleY` `rotate` `opacity` |
 | `Camera` | 一个 `core.Shader` 场景，相机是 uniform | `eye.x/y/z` `look.x/y/z` `fov` `tint` |
 | `Canvas` | 自己的 `Draw` 回调 | — |
@@ -257,7 +257,7 @@ keyframe.Win(500*ms, 5*time.Second, 400*ms) // 窗口：0→1（带 ramp）→�
 keyframe.Keys(...).Ease(keyframe.EaseInOut) // 一条轨道一个缓动
 ```
 
-**没有屏幕也能审。** `Lint()` 报八类真错：节点重名、`Track` 指向不存在的节点、通道写错（`eye.z` 写到 `Box` 上）、同一通道两条轨道、关键帧超出镜头、关键帧不递增、`opacity` 越界、某条轨道 >¼ 时长完全不动（死区间）。`Timeline()` 把每条轨道画成 48 列 ASCII 曲线，`Dump()` 再加节点清单；`Sample(t)` 是纯数值求值，用来写断言而不是比截图。
+**没有屏幕也能审。** `Lint()` 报十二类真错：节点重名、`Track` 指向不存在的节点、通道写错（`eye.z` 写到 `Box` 上）、同一通道两条轨道、关键帧超出镜头、时间重复的帧被丢掉（硬切要两条通道）、`opacity` 越界、某条轨道 >¼ 时长完全不动（死区间），以及画不出来的节点——camera 没 `Program`、canvas 没 `Draw`、disc 没宽度（撑满成方块）、group 用 `At` 定位。`Timeline()` 把每条轨道按自己的缓动画成 48 列 ASCII 曲线，`Dump()` 再加节点清单；`Sample(t)` 是纯数值求值，用来写断言而不是比截图。
 
 **录制走同一个录制器**：推 `__filmT` 就够，不需要第二套钩子。页面家具用 `HIDE` 藏、只录一块用 `CLIP`、先点进页签用 `PRESS`：
 

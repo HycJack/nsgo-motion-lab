@@ -49,7 +49,7 @@ go tool nsgo build -target all -output dist
 | `shader3d.go` · `page_3d.go` | 光线步进场景（相机＝uniform）＋ CPU 投影立方体 ＋ CSS 3D 翻面，9 张 |
 | `page_one_take.go` | 一镜到底的 3 张：18s 的相机长镜、它的时间表、12s 的 2D 视差落版 |
 | `page_studio.go` · `takes.go` | Studio 页签的 3 张：`keyframe` 写的 18s 相机长镜、12s 三幕分镜、时间表与 Lint 自画像；takes 用 `sync.Once` 长寿 |
-| `keyframe_live_test.go` | 定格与纯数值对齐：逐节点比对渲染值 vs `Sample`（误差 0.01），并守住节点不重建 |
+| `keyframe_live_test.go` | 定格与纯数值对齐：逐节点比对渲染值 vs `Sample`（误差 0.01）＋ 页签来回一趟后定格还在原处（时钟没有随卸载被释放） |
 | `app_test.go` | 无头测试：着色器编译 + 页签切换 + 控件交互 + 8 个动效包的首尾卡片 |
 | `shots/*.js` | `docs/` 里那些截图的来源（`lab/shots/` 只入 git 脚本，帧和 png 一律忽略）：`packs.js` → `pack-*.gif`、`uikit.js`/`uipack.js` → `uikit*.gif`、`shot.js` 单页、`tabshots.js` camera 页、`take.js` 一镜到底抽帧、`cards.js` 单卡中途与静止 |
 | `atlasintro/` · `showreel/` | 两个独立子工程（`go run` 各自起），用 `nsgofilm/film` 出片；录制统一走 `../film-framework/shots/film.js` |
@@ -299,8 +299,8 @@ Kage 就是 Go 语法的 GLSL 分片着色器：入口 `Fragment(dst vec4, pos v
 | 卡片 | 演什么 |
 | --- | --- |
 | **S1 · Take** | 18 秒、8 条相机轨道的一镜到底（着色器场景当舞台），中途换三次字幕。和 `One take` 页签同一个镜头，但这次是**写成轨道**的 |
-| **S2 · Storyboard** | 12 秒三幕：柱状城市上场的溶解（3.8→4.2s）→ 月亮与轨道上台 → 7.98→8.0s 的 **20 毫秒硬切**落到标题。没有挂载/卸载，只有窗口重叠 |
-| **S3 · Script check** | 同一支分镜的 `Timeline()`（每条轨道 48 列 ASCII 曲线）与 `Lint()`（八类真错），给「看不见画面」的人看 |
+| **S2 · Storyboard** | 12 秒三幕：柱状城市上场的溶解（3.8→4.2s）→ 月亮与轨道上台 → 7.98→8.0s 的 **20 毫秒硬切**落到标题。没有挂载/卸载，只有窗口重叠：第二幕一直亮到 7.98s 才让位，硬切的两条 ramp 在同一边界交叉，中间没有一帧是空的 |
+| **S3 · Script check** | 同一支分镜的 `Timeline()`（每条轨道 48 列 ASCII 曲线）与 `Lint()`（十二类真错），给「看不见画面」的人看 |
 
 ```go
 take := keyframe.New("story", 12*time.Second)     // 一支 take＝一个时钟
@@ -313,7 +313,7 @@ take.Frame(cx)                                    // 编译：播放 0 commit/�
 
 四个坑，前三个是这一层自己踩出来的：
 
-1. **镜头要长寿**。`keyframe.New` 放在页面函数里＝每次 commit 重建时钟，外部定格永远追不上；`takes.go` 用 `sync.Once` 建一次，页面每次只 `take.Frame(cx)`。
+1. **镜头要长寿**。`keyframe.New` 放在页面函数里＝每次 commit 重建时钟，外部定格永远追不上；`takes.go` 用 `sync.Once` 建一次，页面每次只 `take.Frame(cx)`。时钟挂在 `core.Holder` 上、锚在 `Tie(cx)` 收到的 app scope，所以卸下页签再回来画面还在原处——值节点被平台释放后读出来是 0，不锚住的话镜头会静默退回第 0 帧。
 2. **定格必须有一次 commit**。`Frame` 把树包在 `core.Dynamic` 里读一个 version 信号，`Seek` 顺手 +1——不然值节点变了、视图树还是上一帧。
 3. **别在 build 里 seek**。`Seek` 会 `StartAnimation`，在树正在构建时启动一个动画会重入引擎的帧循环，wasm 直接 OOM（4 GB）。挂载时的「落到第 0 帧」推迟到 `cx.RequestAnimationFrame` 里做。
 4. **组不合成透明度**。父容器 `Opacity` 在 web 上不乘到子节点，所以组的淡出用 `core.Mul` 扇出到每个孩子。
@@ -325,5 +325,5 @@ cd ../film-framework
 READY='[data-testid="tab-Studio"]' PRESS=Studio HIDE='[data-testid^="chip-"]' \
 CLIP='[data-testid="stage-S1"]' SIZE=1280x900 WORKERS=2 \
 node shots/film.js http://127.0.0.1:8099/ ../lab/shots/rec/take-s1 18 10
-# → ../lab/shots/rec/take-s1/film.mp4（583x240、180 帧、10 fps），拷到 ../lab/docs/
+# → ../lab/shots/rec/take-s1/film.mp4（582x240、180 帧、10 fps），拷到 ../lab/docs/
 ```

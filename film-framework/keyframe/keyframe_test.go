@@ -1,6 +1,7 @@
 package keyframe
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -48,9 +49,19 @@ func TestWinShape(t *testing.T) {
 // interpolation needs strictly increasing input, and a hard cut written as two
 // keys at once has to survive as one.
 func TestDedupeKeepsFirst(t *testing.T) {
-	got := dedupe([]Key{{0, 1}, {2, 1}, {2, 0}, {3, 0}})
+	got, dropped := dedupe([]Key{{0, 1}, {2, 1}, {2, 0}, {3, 0}})
 	if len(got) != 3 || got[1].V != 1 {
 		t.Fatalf("dedupe = %+v, want the 2s key kept at 1", got)
+	}
+	if dropped != 1 {
+		t.Errorf("dedupe dropped %d keys, want 1", dropped)
+	}
+	// And Lint has to say it out loud: a key that vanished is invisible in the
+	// timeline, so it would otherwise be found only in the render.
+	take := New("cut", 4*time.Second)
+	take.Box("a").On("x", Keys(0, 0, 2, 100, 2, 0, 4, 100))
+	if said := issues(take); !strings.Contains(said, "repeated a time") {
+		t.Errorf("Lint stayed silent about a dropped key; it said:\n%s", said)
 	}
 }
 
@@ -131,6 +142,96 @@ func TestTimelineHasARowPerTrack(t *testing.T) {
 		}
 	}
 	t.Logf("\n%s", take.Dump())
+}
+
+// TestLintCatchesUndrawable walks the nodes that are in the tree but can never
+// draw: a camera with no program, a canvas with no Draw, a disc that is a
+// rectangle because it has no width, and a group moved by At (which build
+// pins at 0,0 — a group moves with a track).
+func TestLintCatchesUndrawable(t *testing.T) {
+	take := New("undrawable", 2*time.Second)
+	take.Add(Camera, "cam")
+	take.Add(Canvas, "sheet")
+	take.Add(Disc, "moon").At(10, 10) // no Size: fills the stage as a slab
+	take.Group("plate").At(20, 20)    // base position is ignored on a group
+
+	joined := issues(take)
+	for _, want := range []string{
+		"camera has no Program",
+		"canvas has no Draw",
+		"disc has no width",
+		"group ignores At",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("Lint missed %q; it said:\n%s", want, joined)
+		}
+	}
+}
+
+// TestTimelineDrawsTheTrackEasing checks that the sparkline is the curve the
+// renderer will play, not time itself: the same keys eased in and out have to
+// look different from a straight ramp, or the timeline lies about the take.
+func TestTimelineDrawsTheTrackEasing(t *testing.T) {
+	straight := New("straight", 4*time.Second)
+	straight.Box("a").On("x", Keys(0, 0, 4, 100).Ease(Linear))
+	curved := New("curved", 4*time.Second)
+	curved.Box("a").On("x", Keys(0, 0, 4, 100).Ease(EaseInOut))
+
+	if straight.Timeline() == curved.Timeline() {
+		t.Errorf("both easings draw one row:\n%s", straight.Timeline())
+	}
+}
+
+// TestCameraChannelsWithDots checks the one place where a channel name contains
+// the separator: "cam.eye.x" is node "cam", channel "eye.x". Splitting on the
+// last dot made every camera track a fatal "no channel x" — on the kind that
+// needs channels with dots the most.
+func TestCameraChannelsWithDots(t *testing.T) {
+	take := New("cam", 2*time.Second)
+	cam := take.Add(Camera, "cam")
+	cam.On("eye.x", Keys(0, -2, 2, 2))
+	cam.On("look.z", Keys(0, 0, 2, 1))
+
+	if said := issues(take); strings.Contains(said, "no channel") {
+		t.Fatalf("a camera's own channels were rejected:\n%s", said)
+	}
+
+	// Track takes a path, and a path with a dotted channel must find its node.
+	byPath := New("path", 2*time.Second)
+	byPath.Add(Camera, "cam2")
+	byPath.Track("cam2.eye.z", Keys(0, 1, 2, 3))
+	if got := byPath.At("cam2.eye.z", 2*time.Second); math.Abs(got-3) > 1e-9 {
+		t.Errorf("Track(cam2.eye.z) evaluated to %v, want 3 — it did not bind to the camera", got)
+	}
+	if said := issues(byPath); strings.Contains(said, "no channel") || strings.Contains(said, "no node") {
+		t.Errorf("Track left something to complain about:\n%s", said)
+	}
+}
+
+// TestTimelineDrawsAFlatTrack checks that a track that never changes still
+// shows up as a row: a row of spaces reads as "no track here", which is the
+// opposite of a channel that holds one value for the whole take.
+func TestTimelineDrawsAFlatTrack(t *testing.T) {
+	take := New("flat", 2*time.Second)
+	take.Box("a").On("opacity", Keys(0, 0.5, 2, 0.5))
+	row := ""
+	for _, line := range strings.Split(take.Timeline(), "\n") {
+		if strings.Contains(line, "a.opacity") {
+			row = line
+		}
+	}
+	if !strings.Contains(row, "----") {
+		t.Errorf("a flat track draws no curve: %q", row)
+	}
+}
+
+// issues is Lint as one string, for the "does it say this" tests.
+func issues(take *Take) string {
+	lines := make([]string, 0, 8)
+	for _, is := range take.Lint() {
+		lines = append(lines, is.String())
+	}
+	return strings.Join(lines, "\n")
 }
 
 // TestSeekWithoutABuildIsSafe checks the exporter's failure mode: a take that

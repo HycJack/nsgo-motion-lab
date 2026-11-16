@@ -77,10 +77,10 @@ func clamp01(x float64) float64 {
 	}
 	return x
 }
-func seg(t, a, b float64) float64 { return clamp01((t - a) / (b - a)) }
-func lerp(a, b, p float64) float64 { return a + (b-a)*p }
+func seg(t, a, b float64) float64   { return clamp01((t - a) / (b - a)) }
+func lerp(a, b, p float64) float64  { return a + (b-a)*p }
 func lerpf(a, b, p float32) float32 { return a + (b-a)*p }
-func smooth(x float64) float64     { x = clamp01(x); return x * x * (3 - 2*x) }
+func smooth(x float64) float64      { x = clamp01(x); return x * x * (3 - 2*x) }
 func easeOut(x float64) float64 {
 	x = clamp01(x)
 	return 1 - math.Pow(1-x, 3)
@@ -521,7 +521,7 @@ func scene2(d *core.Drawing, t float64) {
 		// text lines
 		d.SetFillColor(core.RGB(0xded8c9))
 		for i := 0; i < 7; i++ {
-			lw := float32(0.62+0.22*math.Sin(float64(i)*1.7))
+			lw := float32(0.62 + 0.22*math.Sin(float64(i)*1.7))
 			rect(d, cx-cw/2+48, cy-chh/2+70+float32(i)*38, cw*lw-96+120, 12)
 		}
 		d.SetFillColor(core.RGB(0xcfc8b6))

@@ -104,7 +104,7 @@ func Title(s Style, title, sub string) func(*core.Drawing, *film.Frame) {
 	return func(d *core.Drawing, f *film.Frame) {
 		bg(s, f, d)
 		t := f.LocalT
-		cx, cy := f.W / 2, f.H/2-60
+		cx, cy := f.W/2, f.H/2-60
 
 		e, dy := rise(t, 0.2, 0.9)
 		put(d, title, cx, cy+dy, titleSize, s.TitleFont, core.FontWeightMedium, s.Heading, float32(e), 0.5)
@@ -206,9 +206,9 @@ func Bullets(s Style, title string, items []string) func(*core.Drawing, *film.Fr
 // KPI 是数据卡：n 个大数字（弹簧计数上冲）+ 标签，横排。
 // 数字从 0 数到 Value（EaseOut），单位后缀可选。
 type KPIItem struct {
-	Value  float64
-	Unit   string // "%", "万", "×" …
-	Label  string
+	Value    float64
+	Unit     string // "%", "万", "×" …
+	Label    string
 	Decimals int
 }
 
