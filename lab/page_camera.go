@@ -22,7 +22,7 @@ package main
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // arcLane is cos or sin of an arc, sampled into an interpolation: an animated

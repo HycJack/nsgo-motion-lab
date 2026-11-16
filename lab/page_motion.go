@@ -7,7 +7,7 @@ package main
 // The code is NSGo's own.
 
 import (
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // seqFade returns an opacity node that shows layer i of n for one slice of the

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // page3D answers a question the camera pack raises. Those 24 cards move a

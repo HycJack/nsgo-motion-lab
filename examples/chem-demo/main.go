@@ -22,7 +22,7 @@ import (
 	"nsgofilm/filmkit"
 	"nsgofilm/mathkit"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 const (

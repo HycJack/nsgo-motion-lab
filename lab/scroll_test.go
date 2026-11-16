@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/oneo-me/nsgo/nsgotest"
+	"github.com/nsgo-dev/nsgo/nsgotest"
 )
 
 // TestScrollFitsWindow holds the scroll view inside the window. When the

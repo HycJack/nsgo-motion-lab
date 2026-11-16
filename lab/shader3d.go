@@ -1,6 +1,6 @@
 package main
 
-import "github.com/oneo-me/nsgo/core"
+import "github.com/nsgo-dev/nsgo/core"
 
 // rayProgram is a ray marcher: a fragment shader that walks a ray through a
 // signed distance field until it meets a surface, then shades that surface

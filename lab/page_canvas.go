@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // canvasPage collects the core.Canvas examples. Canvas.Draw records 2D

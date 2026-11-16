@@ -5,7 +5,6 @@ version: 0.1.0
 dev:
   target: native
   hot_reload: false
-  fps: false
 
 build:
   output: dist

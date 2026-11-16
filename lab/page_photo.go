@@ -10,7 +10,7 @@ package main
 // Catalog names and timings: github.com/showheyohtaki/motion-prompt (MIT).
 
 import (
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // phScene is a horizon, a sun and a bust. The head and the body are separate

@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/oneo-me/nsgo/base"
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/base"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 func uikitPage(cx *core.Scope) core.Node {
@@ -510,8 +510,8 @@ func tooltipCard(cx *core.Scope) core.Node {
 			Position: core.Relative, Width: core.Pt(26), Height: core.Pt(26), CornerRadius: 13,
 			Background: core.RGBA(0xffffff, 0.08), AlignItems: core.AlignCenter, JustifyContent: core.JustifyCenter,
 		},
-		OnHoverIn:  hoverIn,
-		OnHoverOut: hoverOut,
+		OnMouseEnter: func(core.MouseEvent) { hoverIn() },
+		OnMouseLeave: func(core.MouseEvent) { hoverOut() },
 		Children: []core.Node{
 			core.Text{Content: "?", Style: core.Style{FontSize: 12, FontWeight: core.FontWeightBold, Color: colMuted}},
 			core.Show{When: shown.Get, Then: func(*core.Scope) core.Node {
@@ -534,7 +534,7 @@ func tooltipCard(cx *core.Scope) core.Node {
 
 	return card("Tooltip · #054", "Hover the icon: the note comes 0.2s later, and leaves with the cursor.", colAmber,
 		core.View{Style: core.Style{Height: core.Pt(56), JustifyContent: core.JustifyCenter, AlignItems: core.AlignStart}, Children: []core.Node{anchor}},
-		note("OnHoverIn and OnHoverOut are View handlers; the 0.2s is cx.AfterFunc, cancelled if you leave first."),
+		note("OnMouseEnter and OnMouseLeave are View handlers; the 0.2s is cx.AfterFunc, cancelled if you leave first."),
 	)
 }
 

@@ -24,7 +24,7 @@ package main
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 func pageOneTake(cx *core.Scope) core.Node {

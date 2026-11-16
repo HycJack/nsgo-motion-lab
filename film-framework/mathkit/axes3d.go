@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Axes3D 是 3D 坐标系：针孔投影在 CPU 上做（和 manim 同一个思路），

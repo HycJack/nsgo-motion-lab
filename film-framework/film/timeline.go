@@ -8,7 +8,7 @@ package film
 import (
 	"fmt"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // timelineGrid 搭全屏的卡片网格。

@@ -3,7 +3,7 @@ package flowkit
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // clamp 来自引擎的 camera.go（布局/路由共用）。

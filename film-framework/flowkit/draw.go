@@ -6,7 +6,7 @@ package flowkit
 
 import (
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Draw 画出时刻 t 的整张图（t 超过 Total 时定格在完成态）。

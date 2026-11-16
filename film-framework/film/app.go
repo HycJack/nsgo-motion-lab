@@ -10,9 +10,9 @@ package film
 import (
 	"time"
 
-	"github.com/oneo-me/nsgo"
-	"github.com/oneo-me/nsgo/base"
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo"
+	"github.com/nsgo-dev/nsgo/base"
+	"github.com/nsgo-dev/nsgo/core"
 
 	"nsgofilm/filmkit"
 	"nsgofilm/keyframe"
@@ -206,7 +206,7 @@ func root(f Film) func(*core.Scope) core.Node {
 					Top: core.Pt(0), Bottom: core.Pt(0),
 				},
 				OnPress:     func(core.PressEvent) { wake() },
-				OnHoverMove: func(core.HoverEvent) { wake() },
+				OnMouseMove: func(core.MouseEvent) { wake() },
 				OnTouch:     func(core.TouchEvent) { wake() },
 			})
 		}

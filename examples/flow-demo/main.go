@@ -18,7 +18,7 @@ import (
 	"nsgofilm/flowkit"
 	"nsgofilm/tpl"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 
 	"github.com/oneo-me/nsgo-flow/flowfile"
 )

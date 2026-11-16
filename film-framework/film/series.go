@@ -1,7 +1,7 @@
 package film
 
 import (
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // 分镜的装配层：Series 自动排布、Seq 场景局部时间、转场声明。

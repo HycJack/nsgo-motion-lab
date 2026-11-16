@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oneo-me/nsgo/core"
-	"github.com/oneo-me/nsgo/nsgotest"
+	"github.com/nsgo-dev/nsgo/core"
+	"github.com/nsgo-dev/nsgo/nsgotest"
 
 	"nsgofilm/filmkit"
 	"nsgofilm/keyframe"

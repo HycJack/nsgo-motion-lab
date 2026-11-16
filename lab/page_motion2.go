@@ -8,7 +8,7 @@ package main
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // pageMotion2 lays the pack out.

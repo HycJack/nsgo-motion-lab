@@ -4,7 +4,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Axes 是 2D 坐标系：数据范围映射到画布上的一块矩形。

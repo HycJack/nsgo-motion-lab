@@ -3,7 +3,7 @@ package mathkit
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Arrow 画一支从 (x0,y0) 指向 (x1,y1) 的箭头：直线 + 实心三角头。

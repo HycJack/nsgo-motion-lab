@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/oneo-me/nsgo/base"
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/base"
+	"github.com/nsgo-dev/nsgo/core"
 
 	"nsgofilm/filmkit"
 )
@@ -191,7 +191,7 @@ func auditBar(cx *core.Scope, f Film, filmT *core.Signal[float64], playing *core
 			Background:   core.RGBA(0x0b0f14, 0.62),
 			CornerRadius: 16,
 		},
-		OnHoverMove: func(core.HoverEvent) { wake() },
+		OnMouseMove: func(core.MouseEvent) { wake() },
 		Children: []core.Node{
 			core.Text{Content: "空格 播放/暂停 · ← → 逐帧 · Shift+← → ±1s · J 0.5× · L 1× · Shift+L 2× · C 批注 · O 导出",
 				Style: core.Style{Color: core.RGBA(0xffffff, 0.55), FontSize: core.Points(18)}},

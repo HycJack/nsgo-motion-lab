@@ -15,7 +15,7 @@ package main
 import (
 	"time"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // ms is the unit the catalog's timings are written in.

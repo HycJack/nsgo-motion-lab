@@ -11,7 +11,7 @@ package mathkit
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Poly 是一条折线：Pts 是扁平的 xy 对。Closed 的折线末段自动回起点，

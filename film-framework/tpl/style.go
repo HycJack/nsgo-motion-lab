@@ -8,7 +8,7 @@
 package tpl
 
 import (
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Style 是一种视觉风格的全部 token（对应 STYLES.md 的 CSS 变量）。

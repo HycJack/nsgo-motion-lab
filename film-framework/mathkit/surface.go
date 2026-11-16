@@ -3,7 +3,7 @@ package mathkit
 import (
 	"sort"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // SurfaceShaded 画参数曲面的实心面片：每个四边形按法线朝向选色打光，

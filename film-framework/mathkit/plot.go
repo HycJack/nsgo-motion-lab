@@ -3,7 +3,7 @@ package mathkit
 import (
 	"math"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Plot 画 y=fn(x)：从 x0 描到 x0+(x1-x0)*p——p 是描画进度 0..1，

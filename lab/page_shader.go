@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // shaderPage collects the core.Shader examples. A shader is written in
@@ -96,8 +96,8 @@ func shaderPointer(cx *core.Scope) core.Node {
 	return card("Pointer grid", "A signal sets the glow on each move; UniformsFunc resends the batch when spacing changes.", colCyan,
 		core.View{
 			Style:       core.Style{Height: core.Pt(190)},
-			OnMouseMove: follow,
-			OnHoverOut:  leave,
+			OnMouseMove:  func(e core.MouseEvent) { follow(e.Position) },
+			OnMouseLeave: func(core.MouseEvent) { leave() },
 			Children: []core.Node{
 				core.Shader{
 					Program: pointerProgram,

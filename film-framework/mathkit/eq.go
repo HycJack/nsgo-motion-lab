@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Eq 是一条公式：轮廓折线的集合，坐标是屏幕朝向（y 向下），

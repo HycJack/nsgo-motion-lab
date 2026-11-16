@@ -13,7 +13,7 @@ package main
 // is NSGo's own.
 
 import (
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // The ui pack draws white sheets on the dark stage, so it needs its own ink.

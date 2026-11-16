@@ -10,7 +10,7 @@ package main
 // Catalog structure and timings: github.com/showheyohtaki/motion-prompt (MIT).
 
 import (
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // lpFrame is a mock browser page: a nav strip and a content area, both empty.

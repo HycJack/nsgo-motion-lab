@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 
 	"nsgofilm/filmkit"
 )

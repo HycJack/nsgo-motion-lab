@@ -20,7 +20,7 @@ import (
 	"nsgofilm/mathkit"
 	"nsgofilm/tpl"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 const (

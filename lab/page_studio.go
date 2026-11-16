@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 
 	"nsgofilm/keyframe"
 )

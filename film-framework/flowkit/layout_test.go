@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/oneo-me/nsgo-flow/flowfile"
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 const sample = `title "登录流程"

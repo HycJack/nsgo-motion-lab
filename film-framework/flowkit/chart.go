@@ -7,7 +7,7 @@ import (
 	"math"
 
 	"github.com/oneo-me/nsgo-flow/flowfile"
-	"github.com/oneo-me/nsgo/core"
+	"github.com/nsgo-dev/nsgo/core"
 )
 
 // Chart 是布局完成的流程图。
